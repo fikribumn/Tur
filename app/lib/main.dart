@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'mesin/daring.dart';
 import 'mesin/hasil.dart';
 import 'mesin/kerentanan.dart';
+import 'peta_page.dart';
 
 void main() => runApp(const ZonaAmanApp());
 
@@ -75,7 +76,8 @@ class _BerandaPageState extends State<BerandaPage> {
   String _pesan = '';
   String _label = '';
   double? _akurasiM;
-  String? _kotaDipilih; // null = lokasi HP
+  String? _kotaDipilih; // nama kota, atau null
+  bool _dariPeta = false; // true bila titik dipilih di peta/pencarian
   HasilLokasi? _hasil;
   double _magnitudo = 6.3;
 
@@ -101,6 +103,7 @@ class _BerandaPageState extends State<BerandaPage> {
   Future<void> _pakaiLokasiHp() async {
     setState(() {
       _kotaDipilih = null;
+      _dariPeta = false;
       _fase = _Fase.mencariLokasi;
     });
     try {
@@ -126,9 +129,24 @@ class _BerandaPageState extends State<BerandaPage> {
     final (lat, lon) = _kota[nama]!;
     setState(() {
       _kotaDipilih = nama;
+      _dariPeta = false;
       _akurasiM = null;
     });
     await _analisis(lat, lon, nama);
+  }
+
+  Future<void> _pilihDiPeta() async {
+    final awalLat = _hasil?.lat ?? -2.5, awalLon = _hasil?.lon ?? 118.0; // tengah Indonesia bila belum ada lokasi
+    final p = await Navigator.of(context).push<LokasiPilihan>(
+      MaterialPageRoute(builder: (_) => PetaPage(awalLat: awalLat, awalLon: awalLon)),
+    );
+    if (p == null || !mounted) return;
+    setState(() {
+      _kotaDipilih = null;
+      _dariPeta = true;
+      _akurasiM = null;
+    });
+    await _analisis(p.lat, p.lon, p.label);
   }
 
   Future<void> _analisis(double lat, double lon, String label) async {
@@ -175,6 +193,7 @@ class _BerandaPageState extends State<BerandaPage> {
       appBar: AppBar(
         title: const Text('TERRA TUR'),
         actions: [
+          IconButton(tooltip: 'Pilih di peta', icon: const Icon(Icons.map_outlined), onPressed: _pilihDiPeta),
           IconButton(
             tooltip: 'Pakai lokasi HP',
             icon: const Icon(Icons.my_location),
@@ -195,8 +214,17 @@ class _BerandaPageState extends State<BerandaPage> {
                   child: ChoiceChip(
                     avatar: const Icon(Icons.my_location, size: 16),
                     label: const Text('Lokasi HP'),
-                    selected: _kotaDipilih == null,
+                    selected: _kotaDipilih == null && !_dariPeta,
                     onSelected: (_) => _pakaiLokasiHp(),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    avatar: const Icon(Icons.map_outlined, size: 16),
+                    label: const Text('Pilih di peta'),
+                    backgroundColor: _dariPeta ? Theme.of(context).colorScheme.primaryContainer : null,
+                    onPressed: _pilihDiPeta,
                   ),
                 ),
                 for (final k in _kota.keys)
@@ -242,7 +270,7 @@ class _BerandaPageState extends State<BerandaPage> {
     return [
       Card(
         child: ListTile(
-          leading: Icon(_kotaDipilih == null ? Icons.my_location : Icons.location_city),
+          leading: Icon(_dariPeta ? Icons.place : (_kotaDipilih == null ? Icons.my_location : Icons.location_city)),
           title: Text(_label),
           subtitle: Text(
               '${h.lat.toStringAsFixed(4)}, ${h.lon.toStringAsFixed(4)}${_akurasiM != null ? ' · akurasi ±${_akurasiM!.round()} m' : ''}\n'
