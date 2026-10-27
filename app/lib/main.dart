@@ -9,6 +9,7 @@ import 'mesin/daring.dart';
 import 'mesin/hasil.dart';
 import 'mesin/kerentanan.dart';
 import 'peta_page.dart';
+import 'simulasi_page.dart';
 
 void main() => runApp(const ZonaAmanApp());
 
@@ -149,6 +150,25 @@ class _BerandaPageState extends State<BerandaPage> {
     await _analisis(p.lat, p.lon, p.label);
   }
 
+  /// Analisis satu titik (server Badan Geologi; paket offline bila tanpa internet dan titik ada di DIY).
+  Future<HasilLokasi> _hitung(double lat, double lon) async {
+    try {
+      return await (await _mesinDaring()).analisis(lat, lon);
+    } on GalatJaringan {
+      if (MesinKerentanan.dalamCakupan(lat, lon)) {
+        _offline ??= await MesinKerentanan.muat();
+        return _offline!.analisis(lat, lon);
+      }
+      rethrow;
+    }
+  }
+
+  void _bukaSimulasi() {
+    final h = _hasil;
+    if (h == null) return;
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SimulasiPage(lokasi: h, analisis: _hitung)));
+  }
+
   Future<void> _analisis(double lat, double lon, String label) async {
     if (!mounted) return;
     setState(() {
@@ -193,6 +213,11 @@ class _BerandaPageState extends State<BerandaPage> {
       appBar: AppBar(
         title: const Text('TERRA TUR'),
         actions: [
+          IconButton(
+            tooltip: 'Simulasi gempa',
+            icon: const Icon(Icons.crisis_alert),
+            onPressed: _hasil == null ? null : _bukaSimulasi,
+          ),
           IconButton(tooltip: 'Pilih di peta', icon: const Icon(Icons.map_outlined), onPressed: _pilihDiPeta),
           IconButton(
             tooltip: 'Pakai lokasi HP',
@@ -282,6 +307,16 @@ class _BerandaPageState extends State<BerandaPage> {
         Card(color: Theme.of(context).colorScheme.tertiaryContainer, child: Padding(padding: const EdgeInsets.all(12), child: Text(_pesan))),
       const SizedBox(height: 4),
       _KartuStatus(level: lv, mmi: gt?.mmi, formasi: h.formasi, umur: h.umur),
+      const SizedBox(height: 12),
+      Card(
+        child: ListTile(
+          leading: const Icon(Icons.crisis_alert, color: Color(0xFFD23B3B)),
+          title: const Text('Simulasi gempa', style: TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: const Text('Taruh sumber gempa di peta dan lihat dampaknya ke titikmu'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _bukaSimulasi,
+        ),
+      ),
       const SizedBox(height: 12),
       if (gt != null)
         Card(

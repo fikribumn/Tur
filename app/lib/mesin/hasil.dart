@@ -31,6 +31,9 @@ class HasilLokasi {
   /// Sesar aktif terdekat (peta 1:1.000.000) dan jaraknya ke jejak sesar.
   final String? namaSesar, statusSesar;
   final double? jarakSesarKm;
+
+  /// Titik pada jejak sesar yang paling dekat dengan lokasi (untuk menaruh sumber simulasi).
+  final double? sesarLat, sesarLon;
   final Mekanisme mekanisme;
   final int? krbTingkat, likTingkat, gtTingkat, tsunamiTingkat, tingkatKeseluruhan;
   final String? krbKelas, tanahLunak;
@@ -53,6 +56,8 @@ class HasilLokasi {
     required this.namaSesar,
     required this.statusSesar,
     required this.jarakSesarKm,
+    this.sesarLat,
+    this.sesarLon,
     required this.mekanisme,
     required this.krbTingkat,
     required this.krbKelas,

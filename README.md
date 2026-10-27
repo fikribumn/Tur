@@ -11,7 +11,8 @@ dan apakah ada bahaya turunan seperti likuefaksi dan longsor. Lokasi mengikuti *
    zona gerakan tanah 1:50.000, KRB tsunami, dan Sesar Opak.
 2. **Kelas material -> Vs30** (digabung proxy kemiringan dari SRTM, Wald & Allen 2007).
 3. **Skenario gempa di sesar aktif terdekat** (peta sesar 1:1.000.000; mekanisme mendatar/naik/normal dibaca dari nama sesar): BSSA14 (PGA/PGV) lalu konversi ke MMI (Worden dkk. 2012). Status kerawanan ditentukan **hanya oleh zonasi resmi**, tidak oleh skenario.
-4. UI berupa kartu ringkas yang bisa dibuka satu per satu (progressive disclosure).
+4. **Simulasi gempa:** taruh sumber gempa dan titikmu di peta, atur magnitudo/kedalaman/mekanisme, lihat cincin zona guncangan (MMI VI-IX) dan dampak di titikmu. Sumber lebih dalam dari 30 km sengaja tidak dihitung (model hanya kerak dangkal). Lapisan zonasi resmi Badan Geologi bisa dinyalakan di atas peta.
+5. UI berupa kartu ringkas yang bisa dibuka satu per satu (progressive disclosure).
 
 ## Struktur
 
@@ -37,6 +38,8 @@ Berkas SRTM (`data/srtm/`) diunduh terpisah dari AWS Terrain Tiles (`S08E110`, `
 
 - **Gempa subduksi/megathrust tidak dimodelkan** (BSSA14 hanya untuk kerak dangkal). Di kota seperti Padang, sesar terdekat bisa puluhan km sehingga skenario jauh lebih kecil daripada bahaya sebenarnya; pegang zonasi resmi.
 - Di luar DIY, kelas material **ditebak dari nama dan umur formasi** (ditandai di aplikasi). Kode formasi peta dipakai ulang antar lembar, jadi pemetaan kode hanya dipakai di DIY.
+- Simulasi memperlakukan sumber sebagai titik (gempa besar dengan pecahan panjang sebenarnya lebih dekat), dan cincin dihitung untuk tanah sedang (Vs30 400 m/s).
+- Peta memakai ubin OpenStreetMap dan pencarian Nominatim (sesuai kebijakan pemakaian mereka); untuk pemakaian luas perlu penyedia ubin sendiri.
 - Mode daring butuh internet; tanpa internet hanya DIY yang bisa dianalisis.
 - Cakupan layer tidak merata: geologi, KRB gempa, dan gerakan tanah ada di seluruh Indonesia; likuefaksi parsial; tsunami dan tanah lunak jarang. "Belum terpetakan" bukan berarti aman.
 - Peta geologi 1:100.000 kasar di graben Bantul; zonasi KRB 1:50.000 dipakai sebagai penentu utama.
