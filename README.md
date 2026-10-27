@@ -1,7 +1,7 @@
 # TERRA TUR
 
 Aplikasi untuk melihat **kerentanan geologi lokasimu saat gempa**: seberapa kuat guncangan diperkuat oleh jenis tanah,
-dan apakah ada bahaya turunan seperti likuefaksi dan longsor. Prototipe saat ini mencakup **Daerah Istimewa Yogyakarta**.
+dan apakah ada bahaya turunan seperti likuefaksi dan longsor. Lokasi mengikuti **GPS HP** dan mencakup **seluruh Indonesia** (data dari server Badan Geologi), dengan paket offline cadangan untuk **DIY**.
 
 > **Bukan alat keselamatan resmi.** Ini prototipe riset. Selalu ikuti arahan BMKG dan BPBD.
 
@@ -10,7 +10,7 @@ dan apakah ada bahaya turunan seperti likuefaksi dan longsor. Prototipe saat ini
 1. **Zonasi resmi Badan Geologi** (Geoportal ESDM): peta geologi 1:100.000, KRB Gempa Bumi 1:50.000, kerentanan likuefaksi,
    zona gerakan tanah 1:50.000, KRB tsunami, dan Sesar Opak.
 2. **Kelas material -> Vs30** (digabung proxy kemiringan dari SRTM, Wald & Allen 2007).
-3. **Skenario gempa di Sesar Opak:** BSSA14 (PGA/PGV) lalu konversi ke MMI (Worden dkk. 2012).
+3. **Skenario gempa di sesar aktif terdekat** (peta sesar 1:1.000.000; mekanisme mendatar/naik/normal dibaca dari nama sesar): BSSA14 (PGA/PGV) lalu konversi ke MMI (Worden dkk. 2012). Status kerawanan ditentukan **hanya oleh zonasi resmi**, tidak oleh skenario.
 4. UI berupa kartu ringkas yang bisa dibuka satu per satu (progressive disclosure).
 
 ## Struktur
@@ -35,6 +35,10 @@ Berkas SRTM (`data/srtm/`) diunduh terpisah dari AWS Terrain Tiles (`S08E110`, `
 
 ## Keterbatasan yang perlu diketahui
 
+- **Gempa subduksi/megathrust tidak dimodelkan** (BSSA14 hanya untuk kerak dangkal). Di kota seperti Padang, sesar terdekat bisa puluhan km sehingga skenario jauh lebih kecil daripada bahaya sebenarnya; pegang zonasi resmi.
+- Di luar DIY, kelas material **ditebak dari nama dan umur formasi** (ditandai di aplikasi). Kode formasi peta dipakai ulang antar lembar, jadi pemetaan kode hanya dipakai di DIY.
+- Mode daring butuh internet; tanpa internet hanya DIY yang bisa dianalisis.
+- Cakupan layer tidak merata: geologi, KRB gempa, dan gerakan tanah ada di seluruh Indonesia; likuefaksi parsial; tsunami dan tanah lunak jarang. "Belum terpetakan" bukan berarti aman.
 - Peta geologi 1:100.000 kasar di graben Bantul; zonasi KRB 1:50.000 dipakai sebagai penentu utama.
 - BSSA14 tanpa suku cekungan sedimen: MMI skenario di Bantul lebih rendah daripada kejadian 2006.
 - Koefisien konversi Worden 2012 belum diverifikasi terhadap makalah aslinya.

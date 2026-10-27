@@ -20,7 +20,7 @@ POLIGON = {
     "likuefaksi_50k": ("likuefaksi_50k", ["kerentanan"]),
     "likuefaksi_100k": ("likuefaksi_100k", ["kerentanan"]),
     "gerakan_tanah": ("gerakan_tanah_50k", ["unsur"]),
-    "tsunami": ("krb_tsunami", []),
+    "tsunami": ("krb_tsunami", ["unsur"]),
     "tanah_lunak": ("tanah_lunak", ["jenis_tana"]),
 }
 

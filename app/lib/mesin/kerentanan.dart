@@ -6,18 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart' show rootBundle;
 
 import 'gmpe.dart';
-
-const namaTingkat = ['Sangat rendah', 'Rendah', 'Menengah', 'Tinggi'];
-
-const _kKrb = {'Sangat Rendah': 0, 'Rendah': 1, 'Menengah': 2, 'Tinggi': 3};
-const _kLik50 = {
-  'Zona Tidak Rentan Likuefaksi': 0,
-  'Zona Kerentanan Likuefaksi Rendah': 1,
-  'Zona Kerentanan Likuefaksi Sedang': 2,
-  'Zona Kerentanan Likuefaksi Tinggi': 3,
-};
-const _kLik100 = {'1': 3, '2': 2};
-const _kGt = {'Sangat Rendah': 0, 'Rendah': 1, 'Menengah': 2, 'Tinggi': 3};
+import 'hasil.dart';
 
 // Batas area data (DIY dan sekitarnya)
 const batasLat0 = -8.2, batasLat1 = -7.5, batasLon0 = 110.0, batasLon1 = 110.7;
@@ -93,43 +82,6 @@ class _Lapisan {
     hit.sort((a, b) => a.luasBbox.compareTo(b.luasBbox));
     return [for (final f in hit) f.atribut];
   }
-}
-
-class HasilLokasi {
-  final double lat, lon;
-  final String? kodeFormasi, formasi, umur, kelasMaterial, namaMaterial, catatanMaterial;
-  final double vs30, elevasiM, kemiringan, jarakOpakKm;
-  final int? krbTingkat, likTingkat, gtTingkat, tingkatKeseluruhan;
-  final String? krbKelas, tanahLunak;
-  final String likSumber, gtSumber;
-  final bool tsunami;
-
-  const HasilLokasi({
-    required this.lat,
-    required this.lon,
-    required this.kodeFormasi,
-    required this.formasi,
-    required this.umur,
-    required this.kelasMaterial,
-    required this.namaMaterial,
-    required this.catatanMaterial,
-    required this.vs30,
-    required this.elevasiM,
-    required this.kemiringan,
-    required this.jarakOpakKm,
-    required this.krbTingkat,
-    required this.krbKelas,
-    required this.likTingkat,
-    required this.likSumber,
-    required this.gtTingkat,
-    required this.gtSumber,
-    required this.tsunami,
-    required this.tanahLunak,
-    required this.tingkatKeseluruhan,
-  });
-
-  /// Skenario gempa di Sesar Opak (mendatar) dengan magnitudo [m]; Rjb ~ jarak ke jejak sesar.
-  GerakTanah skenario(double m) => gerakTanah(m, jarakOpakKm, vs30);
 }
 
 class MesinKerentanan {
@@ -236,16 +188,16 @@ class MesinKerentanan {
 
     final krb = _krb.cari(lon, lat);
     final krbKelas = krb.isEmpty ? null : krb.first['kelas'] as String;
-    final krbLv = krbKelas == null ? null : _kKrb[krbKelas.replaceFirst('Kawasan Rawan Bencana Gempabumi ', '')];
+    final krbLv = krbKelas == null ? null : kKrb[krbKelas.replaceFirst('Kawasan Rawan Bencana Gempabumi ', '')];
 
     final l50 = _l50.cari(lon, lat), l100 = _l100.cari(lon, lat);
     int? likLv;
     String likSrc;
     if (l50.isNotEmpty) {
-      likLv = _kLik50[(l50.first['kerentanan'] as String).trim()];
+      likLv = kLik50[(l50.first['kerentanan'] as String).trim()];
       likSrc = 'resmi 1:50.000';
     } else if (l100.isNotEmpty) {
-      final lv = _kLik100[l100.first['kerentanan'].toString().trim()];
+      final lv = kLik100[l100.first['kerentanan'].toString().trim()];
       likLv = (lv != null && mat != null) ? math.min(lv, 1 + (mat['likuefaksi'] as int)) : lv;
       likSrc = 'resmi 1:100.000 (poligon kasar, dibatasi oleh material)';
     } else {
@@ -253,11 +205,11 @@ class MesinKerentanan {
       likSrc = 'perkiraan dari material';
     }
 
-    final gt = _gt.cari(lon, lat).where((p) => _kGt.containsKey(p['unsur'])).toList();
+    final gt = _gt.cari(lon, lat).where((p) => kGt.containsKey(p['unsur'])).toList();
     int? gtLv;
     String gtSrc;
     if (gt.isNotEmpty) {
-      gtLv = _kGt[gt.first['unsur']];
+      gtLv = kGt[gt.first['unsur']];
       gtSrc = 'resmi 1:50.000';
     } else {
       gtLv = mat == null ? null : ((mat['longsor'] as int) * math.min(1.0, 0.4 + slope * 6)).round();
@@ -266,26 +218,32 @@ class MesinKerentanan {
 
     final lunak = _lunak.cari(lon, lat);
     final level = [krbLv, likLv, gtLv].whereType<int>();
+    final tsu = _tsunami.cari(lon, lat);
     return HasilLokasi(
       lat: lat,
       lon: lon,
+      sumber: 'offline',
       kodeFormasi: g?['simobj'] as String?,
       formasi: g?['namobj'] as String?,
       umur: g?['umurobj'] as String?,
       kelasMaterial: kode,
       namaMaterial: mat?['nama'] as String?,
       catatanMaterial: mat?['catatan'] as String?,
+      materialPerkiraan: false,
       vs30: vs30,
       elevasiM: elev,
       kemiringan: slope,
-      jarakOpakKm: dOpak,
+      namaSesar: 'Sesar Opak',
+      statusSesar: 'Aktif',
+      jarakSesarKm: dOpak,
+      mekanisme: Mekanisme.mendatar,
       krbTingkat: krbLv,
       krbKelas: krbKelas,
       likTingkat: likLv,
       likSumber: likSrc,
       gtTingkat: gtLv,
       gtSumber: gtSrc,
-      tsunami: _tsunami.cari(lon, lat).isNotEmpty,
+      tsunamiTingkat: tsu.isEmpty ? null : (kTsunami[tsu.first['unsur']] ?? 3),
       tanahLunak: lunak.isEmpty ? null : lunak.first['jenis_tana'] as String?,
       tingkatKeseluruhan: level.isEmpty ? null : level.reduce(math.max),
     );

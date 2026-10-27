@@ -29,7 +29,7 @@ MAGNITUDO = [round(5.0 + 0.1 * i, 1) for i in range(26)]  # 5,0 .. 7,5 untuk sli
 KRB = {"Sangat Rendah": 0, "Rendah": 1, "Menengah": 2, "Tinggi": 3}
 LIK50 = {"Zona Tidak Rentan Likuefaksi": 0, "Zona Kerentanan Likuefaksi Rendah": 1,
          "Zona Kerentanan Likuefaksi Sedang": 2, "Zona Kerentanan Likuefaksi Tinggi": 3}
-LIK100 = {"1": 3, "2": 2}  # keterangan resmi: 1 = merata/rusak parah, 2 = tidak merata
+LIK100 = {"1": 3, "2": 2, "3": 1}  # keterangan resmi: 1 = merata/rusak parah, 2 = tidak merata, 3 = jarang
 GT = {"Sangat Rendah": 0, "Rendah": 1, "Menengah": 2, "Tinggi": 3}
 
 
