@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TERRA TUR - Mockup</title>
+<style>
+:root{
+  --bg:#eef0f3; --card:#fff; --ink:#1c2430; --mute:#6b7685; --line:#e3e7ec;
+  --ok:#2e9e6b; --warn:#d9a21b; --high:#e8702a; --bad:#d23b3b;
+  --accent:#2f5fd0;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f1319; --card:#1a212b; --ink:#e8edf3; --mute:#93a0b1; --line:#2a3340; --accent:#7ea2ff}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;display:flex;justify-content:center}
+.app{width:100%;max-width:420px;min-height:100vh;padding:16px;display:flex;flex-direction:column;gap:12px}
+h1{font-size:13px;font-weight:600;color:var(--mute);margin:4px 0 0;letter-spacing:.04em;text-transform:uppercase}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 13px;font:inherit;font-size:13px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.status{padding:18px;border-left:8px solid var(--c,var(--warn))}
+.status .lvl{font-size:22px;font-weight:700;color:var(--c)}
+.status p{margin:6px 0 0}
+.status small{color:var(--mute)}
+.row{width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--c,var(--mute));flex:none}
+.row .t{flex:1;font-weight:600}
+.row .v{color:var(--mute);font-size:13px;text-align:right}
+.row .arr{color:var(--mute);transition:transform .2s}
+.item[data-open=true] .arr{transform:rotate(90deg)}
+.item + .item{border-top:1px solid var(--line)}
+.body{display:none;padding:0 16px 16px 40px}
+.item[data-open=true] .body{display:block}
+.body p{margin:0 0 8px}
+.body .mute{color:var(--mute);font-size:13px}
+.action{padding:16px;background:var(--accent);color:#fff;border-radius:16px;font-weight:600}
+.action ul{margin:8px 0 0;padding-left:18px;font-weight:400}
+.sim{padding:14px 16px;display:grid;gap:8px}
+.sim label{display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
+.sim input{width:100%;accent-color:var(--accent)}
+.sim b{color:var(--ink)}
+svg{width:100%;height:auto;display:block;margin-top:6px}
+.foot{font-size:11px;color:var(--mute);text-align:center;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<main class="app">
+  <h1>TERRA TUR · kerentanan geologi lokasimu</h1>
+  <div class="chips" id="chips" role="group" aria-label="Pilih lokasi"></div>
+
+  <section class="card status" id="status" aria-live="polite"></section>
+
+  <section class="card sim">
+    <label>Skenario: gempa di Sesar Opak, magnitudo <b id="mv"></b></label>
+    <input type="range" id="m" min="5" max="7.5" step="0.1" value="6.3" aria-label="Magnitudo skenario">
+  </section>
+
+  <section class="card" id="cards"></section>
+
+  <section class="action" id="action"></section>
+
+  <p class="foot">Zonasi: Badan Geologi (Geoportal ESDM). Estimasi guncangan skenario adalah nilai median model (BSSA14, Worden 2012) tanpa kalibrasi lokal dan bukan alat keselamatan resmi. Ikuti arahan BMKG/BPBD.</p>
+</main>
+
+<script src="data.js"></script>
+<script>
+// Tingkat resmi Badan Geologi 0-3
+const LV = [
+  {n:"Sangat rendah", c:"var(--ok)"},
+  {n:"Rendah",        c:"var(--warn)"},
+  {n:"Menengah",      c:"var(--high)"},
+  {n:"Tinggi",        c:"var(--bad)"}
+];
+const ROM = ["","I","II","III","IV","V","VI","VII","VIII","IX","X"];
+const el = id => document.getElementById(id);
+let cur = Object.keys(LOK).includes("Bantul kota") ? "Bantul kota" : Object.keys(LOK)[0];
+const open = new Set();
+const rom = m => ROM[Math.max(1, Math.min(10, Math.round(m)))];
+
+function mmiSkenario(L, M){
+  return L.skenario.mmi_per_m[M.toFixed(1)];   // dari BSSA14 + Worden 2012 (prototype/gmpe.py)
+}
+function tingkat(L, mmi){
+  const dasar = L.tingkat_keseluruhan ?? 1;
+  const batas = mmi<6 ? 1 : mmi<7 ? 2 : 3;   // guncangan skenario kecil -> dampak dibatasi
+  return Math.min(dasar, batas);
+}
+
+function chips(){
+  el("chips").innerHTML = Object.keys(LOK).map(k =>
+    `<button class="chip" aria-pressed="${k===cur}" data-k="${k}">${k}</button>`).join("");
+  el("chips").onclick = e => { const k = e.target.dataset.k; if(k){cur=k; render();} };
+}
+
+function penampang(kode){
+  const m = {aluvium:["#d9c27a","#b79b4a",70], aluvium_tua:["#cdb978","#a8935a",55], koluvium:["#b9a58a","#8c7a63",45],
+             vulkanik_muda:["#a98f78","#7c6552",50], vulkanik_tua:["#9c8672","#6f5b4a",30], tuf_breksi:["#9aa3ad","#6d7782",22],
+             sedimen_lunak:["#c9b48f","#9a8666",35], sedimen_tua:["#b8a98f","#8a7c63",25], gamping:["#cfd3c4","#9ea28f",15],
+             beku:["#8c929b","#5f656e",12], malih:["#8c929b","#5f656e",12]}[kode] || ["#bbb","#888",30];
+  const [a,b,t] = m;
+  return `<svg viewBox="0 0 300 120" role="img" aria-label="Ilustrasi lapisan tanah">
+    <rect y="30" width="300" height="${t}" fill="${a}"/>
+    <rect y="${30+t}" width="300" height="${90-t}" fill="${b}" opacity=".9"/>
+    <path d="M0 30 Q75 24 150 30 T300 30" stroke="#5a7a3a" stroke-width="3" fill="none"/>
+    <text x="8" y="${30+t/2+4}" font-size="11" fill="#2b2b2b">lapisan permukaan</text>
+    <text x="8" y="${30+t+(90-t)/2+4}" font-size="11" fill="#fff">batuan di bawahnya</text>
+  </svg>`;
+}
+
+const lvText = (v, ket) => v==null ? "Belum ada data" : LV[v].n;
+const lvColor = v => v==null ? "var(--mute)" : LV[v].c;
+
+function render(){
+  chips();
+  const L = LOK[cur], M = +el("m").value;
+  el("mv").textContent = M.toFixed(1);
+  const mmi = mmiSkenario(L, M);
+  const lv = tingkat(L, mmi);
+
+  const nm = L.material ? L.material.nama : "Data material tidak tersedia";
+  el("status").style.setProperty("--c", lvColor(lv));
+  el("status").innerHTML = `<div class="lvl">Kerawanan ${LV[lv].n}</div>
+    <p>Di skenario ini guncangan sekitar <b>${rom(mmi)} MMI</b>.</p>
+    <small>${L.geologi ? L.geologi.formasi + " (" + L.geologi.umur + ")" : nm}</small>`;
+
+  const topik = [
+    {id:"g", t:"Guncangan", v:L.krb_gempa.kelas ? "Zona "+LV[L.krb_gempa.tingkat].n : "Belum ada data", lv:L.krb_gempa.tingkat,
+     d:`<p>Zonasi resmi: <b>${L.krb_gempa.kelas ? L.krb_gempa.kelas.replace("Kawasan Rawan Bencana ","") : "belum ada data"}</b>.</p>
+        <p>Skenario M${M.toFixed(1)}: sekitar <b>${rom(mmi)} MMI</b> di titik ini (jarak ke Sesar Opak ${L.jarak_sesar_opak_km} km, Vs30 ~${L.vs30} m/s).</p>
+        <p class="mute">Tanah lunak memperbesar dan memperpanjang guncangan dibanding batuan keras.</p>`},
+    {id:"l", t:"Likuefaksi", v:lvText(L.likuefaksi.tingkat), lv:L.likuefaksi.tingkat,
+     d:`<p>${L.likuefaksi.tingkat>=2 ? "Pasir lepas jenuh air bisa berubah seperti cairan saat diguncang kuat. Tanah dapat amblas, bergeser, atau menyemburkan pasir."
+          : "Material di sini kecil kemungkinannya mengalami likuefaksi."}</p>
+        <p class="mute">Sumber: ${L.likuefaksi.sumber}.</p>`},
+    {id:"s", t:"Gerakan tanah / longsor", v:lvText(L.gerakan_tanah.tingkat), lv:L.gerakan_tanah.tingkat,
+     d:`<p>${L.gerakan_tanah.tingkat>=2 ? "Lereng di sekitar sini bisa bergerak saat gempa, terutama setelah hujan."
+          : "Kemungkinan gerakan tanah di sekitar sini kecil."}</p>
+        <p class="mute">Sumber: ${L.gerakan_tanah.sumber}.</p>`},
+    {id:"t", t:"Jenis tanah di sini", v:L.geologi ? L.geologi.formasi : "-", lv:null,
+     d:`<p>${L.material ? L.material.catatan : "Belum ada keterangan."}</p>${L.material ? penampang(L.material.kelas) : ""}
+        <p class="mute">${L.material ? L.material.nama : ""}${L.tanah_lunak ? " · tanah lunak terpetakan: "+L.tanah_lunak : ""}</p>`},
+  ];
+  if (L.tsunami) topik.push({id:"u", t:"Tsunami", v:"Masuk zona rawan", lv:3,
+     d:`<p>Titik ini berada dalam kawasan rawan tsunami resmi. Bila guncangan kuat dan lama, segera ke tempat tinggi.</p>`});
+  else if (L.elevasi_m < 15) topik.push({id:"u", t:"Tsunami", v:"Belum terpetakan", lv:null,
+     d:`<p>Lokasi pesisir rendah (${L.elevasi_m} m). Data kawasan rawan tsunami resmi belum mencakup titik ini. <b>Belum terpetakan bukan berarti aman.</b></p>`});
+  topik.push({id:"x", t:"Detail teknis", v:"untuk yang penasaran", lv:null,
+     d:`<p class="mute">Vs30 ~ ${L.vs30} m/s · elevasi ${L.elevasi_m} m · lereng ${(L.kemiringan*100).toFixed(1)}%<br>
+        Kode formasi: ${L.geologi ? L.geologi.kode : "-"}<br>
+        Sumber zonasi: Badan Geologi (Geoportal ESDM). MMI skenario: BSSA14 + Worden 2012, nilai median tanpa kalibrasi lokal.</p>`});
+
+  el("cards").innerHTML = topik.map(x => `
+    <div class="item" data-open="${open.has(x.id)}" style="--c:${lvColor(x.lv)}">
+      <button class="row" data-id="${x.id}" aria-expanded="${open.has(x.id)}">
+        <span class="dot"></span><span class="t">${x.t}</span><span class="v">${x.v}</span><span class="arr">›</span>
+      </button>
+      <div class="body">${x.d}</div>
+    </div>`).join("");
+  el("cards").onclick = e => {
+    const b = e.target.closest(".row"); if(!b) return;
+    const id = b.dataset.id; open.has(id) ? open.delete(id) : open.add(id); render();
+  };
+
+  const tips = ["Lindungi kepala, jauhi kaca dan benda jatuh."];
+  if ((L.likuefaksi.tingkat??0)>=2) tips.push("Setelah guncangan, menjauh dari tanah yang retak atau berair.");
+  if ((L.gerakan_tanah.tingkat??0)>=2) tips.push("Jauhi lereng dan tebing, waspada longsor susulan.");
+  if (L.tsunami || L.elevasi_m < 15) tips.push("Di pesisir: bila guncangan kuat atau lama, segera ke tempat tinggi tanpa menunggu peringatan.");
+  el("action").innerHTML = `Apa yang harus dilakukan<ul>${tips.map(t=>`<li>${t}</li>`).join("")}</ul>`;
+}
+el("m").oninput = render;
+render();
+</script>
+</body>
+</html>

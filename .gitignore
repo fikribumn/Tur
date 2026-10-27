@@ -1,0 +1,22 @@
+# Unduhan mentah dan cache turunan (bisa dibuat ulang dengan skrip di prototype/)
+data/srtm/
+data/elevasi_diy.json
+
+# Flutter / Android
+app/.dart_tool/
+app/build/
+app/.flutter-plugins-dependencies
+app/android/.gradle/
+app/android/local.properties
+app/android/**/*.jks
+app/android/**/*.keystore
+app/android/key.properties
+*.iml
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# Berkas sementara
+_check.js

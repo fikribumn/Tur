@@ -1,0 +1,38 @@
+{
+  "_catatan": "Pemetaan kode formasi Peta Geologi Indonesia 1:100.000 (Badan Geologi, 2018) ke kelas material. Skor 0-3 (0 tidak ada, 3 tinggi) dan Vs30 tipikal adalah penilaian awal berbasis sifat material umum, BELUM divalidasi dengan data bor/mikrozonasi. Perbaiki bersama ahli geologi.",
+  "kelas": {
+    "aluvium":       {"nama": "Aluvium (endapan sungai/dataran)", "vs30": 200, "likuefaksi": 2, "longsor": 0,
+                      "catatan": "Sedimen Kuarter lepas hingga lunak. Memperbesar guncangan."},
+    "aluvium_tua":   {"nama": "Aluvium tua (teras)", "vs30": 300, "likuefaksi": 1, "longsor": 0,
+                      "catatan": "Sedimen lebih padat daripada aluvium muda."},
+    "koluvium":      {"nama": "Koluvium (material runtuhan lereng)", "vs30": 250, "likuefaksi": 1, "longsor": 3,
+                      "catatan": "Material lepas di kaki lereng, mudah bergerak."},
+    "vulkanik_muda": {"nama": "Endapan gunung api muda (Merapi)", "vs30": 300, "likuefaksi": 1, "longsor": 2,
+                      "catatan": "Pasir, kerikil, dan abu vulkanik yang belum padat."},
+    "vulkanik_tua":  {"nama": "Batuan gunung api tua", "vs30": 450, "likuefaksi": 0, "longsor": 2,
+                      "catatan": "Lebih padat, tetapi lapuk di lereng."},
+    "tuf_breksi":    {"nama": "Tuf dan breksi vulkanik Tersier", "vs30": 500, "likuefaksi": 0, "longsor": 3,
+                      "catatan": "Cukup keras, namun mudah lapuk dan longsor di lereng terjal."},
+    "sedimen_lunak": {"nama": "Batuan sedimen Neogen (napal/batupasir)", "vs30": 400, "likuefaksi": 0, "longsor": 2,
+                      "catatan": "Batuan sedimen muda, relatif lunak saat lapuk."},
+    "sedimen_tua":   {"nama": "Batuan sedimen Paleogen", "vs30": 500, "likuefaksi": 0, "longsor": 2,
+                      "catatan": "Batupasir, lempung, dan batubara tua."},
+    "gamping":       {"nama": "Batugamping (karst)", "vs30": 700, "likuefaksi": 0, "longsor": 1,
+                      "catatan": "Keras. Waspada runtuhan gua/dolina."},
+    "beku":          {"nama": "Batuan beku (andesit/dasit/diorit)", "vs30": 800, "likuefaksi": 0, "longsor": 2,
+                      "catatan": "Keras. Longsor terjadi pada lapisan pelapukan di lereng curam."},
+    "malih":         {"nama": "Batuan malihan", "vs30": 800, "likuefaksi": 0, "longsor": 2,
+                      "catatan": "Keras."}
+  },
+  "pemetaan_simobj": {
+    "Qa": "aluvium", "Qt3": "aluvium_tua", "Qc": "koluvium",
+    "Qmi": "vulkanik_muda", "Qvu3": "vulkanik_muda", "Qcc": "vulkanik_muda", "na": "vulkanik_muda", "Qb1": "vulkanik_muda",
+    "Qmo": "vulkanik_tua", "Qsmo": "vulkanik_tua", "Qsm": "vulkanik_tua", "Qls2": "vulkanik_tua", "d": "vulkanik_tua",
+    "Tmse": "tuf_breksi", "Tms3": "tuf_breksi", "Tmng": "tuf_breksi", "Tmss": "tuf_breksi", "Tomm3": "tuf_breksi", "Tomk": "tuf_breksi",
+    "Tmps": "sedimen_lunak", "Tmpk2": "sedimen_lunak", "Tmw1": "sedimen_lunak", "Tmn4": "sedimen_lunak", "Tpp1": "sedimen_lunak", "Tmph": "sedimen_lunak",
+    "Teon": "sedimen_tua", "Tew": "sedimen_tua",
+    "Tmj": "gamping", "Tmwl": "gamping", "Tmwl1": "gamping", "Tmo": "gamping",
+    "a": "beku", "da": "beku", "Dr": "beku", "Tpdi": "beku",
+    "KTm1": "malih"
+  }
+}

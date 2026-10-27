@@ -1,0 +1,605 @@
+{
+ "Malioboro": {
+  "lat": -7.793,
+  "lon": 110.366,
+  "geologi": {
+   "kode": "Qvu3",
+   "formasi": "Undifferentiated Volcanic Rock",
+   "umur": "Kuarter"
+  },
+  "material": {
+   "kelas": "vulkanik_muda",
+   "nama": "Endapan gunung api muda (Merapi)",
+   "catatan": "Pasir, kerikil, dan abu vulkanik yang belum padat."
+  },
+  "vs30": 357,
+  "elevasi_m": 117,
+  "kemiringan": 0.0084,
+  "jarak_sesar_opak_km": 15.2,
+  "skenario": {
+   "M": 6.3,
+   "mmi": 6.9,
+   "pga_g": 0.2,
+   "pgv_cms": 18,
+   "mmi_per_m": {
+    "5.0": 4.7,
+    "5.1": 4.9,
+    "5.2": 5.1,
+    "5.3": 5.3,
+    "5.4": 5.6,
+    "5.5": 5.8,
+    "5.6": 6.0,
+    "5.7": 6.1,
+    "5.8": 6.3,
+    "5.9": 6.4,
+    "6.0": 6.5,
+    "6.1": 6.7,
+    "6.2": 6.8,
+    "6.3": 6.9,
+    "6.4": 6.9,
+    "6.5": 7.0,
+    "6.6": 7.1,
+    "6.7": 7.1,
+    "6.8": 7.2,
+    "6.9": 7.3,
+    "7.0": 7.3,
+    "7.1": 7.4,
+    "7.2": 7.5,
+    "7.3": 7.5,
+    "7.4": 7.6,
+    "7.5": 7.7
+   }
+  },
+  "krb_gempa": {
+   "tingkat": 2,
+   "kelas": "Kawasan Rawan Bencana Gempabumi Menengah"
+  },
+  "likuefaksi": {
+   "tingkat": 2,
+   "sumber": "resmi 1:100.000 (poligon kasar, dibatasi oleh material)"
+  },
+  "gerakan_tanah": {
+   "tingkat": 0,
+   "sumber": "resmi 1:50.000"
+  },
+  "tsunami": false,
+  "tanah_lunak": null,
+  "tingkat_keseluruhan": 2
+ },
+ "Bantul kota": {
+  "lat": -7.888,
+  "lon": 110.329,
+  "geologi": {
+   "kode": "Qvu3",
+   "formasi": "Undifferentiated Volcanic Rock",
+   "umur": "Kuarter"
+  },
+  "material": {
+   "kelas": "vulkanik_muda",
+   "nama": "Endapan gunung api muda (Merapi)",
+   "catatan": "Pasir, kerikil, dan abu vulkanik yang belum padat."
+  },
+  "vs30": 344,
+  "elevasi_m": 47,
+  "kemiringan": 0.0053,
+  "jarak_sesar_opak_km": 10.2,
+  "skenario": {
+   "M": 6.3,
+   "mmi": 7.3,
+   "pga_g": 0.26,
+   "pgv_cms": 25,
+   "mmi_per_m": {
+    "5.0": 5.1,
+    "5.1": 5.4,
+    "5.2": 5.6,
+    "5.3": 5.9,
+    "5.4": 6.1,
+    "5.5": 6.4,
+    "5.6": 6.5,
+    "5.7": 6.6,
+    "5.8": 6.8,
+    "5.9": 6.9,
+    "6.0": 7.0,
+    "6.1": 7.1,
+    "6.2": 7.3,
+    "6.3": 7.3,
+    "6.4": 7.4,
+    "6.5": 7.4,
+    "6.6": 7.5,
+    "6.7": 7.6,
+    "6.8": 7.6,
+    "6.9": 7.7,
+    "7.0": 7.7,
+    "7.1": 7.8,
+    "7.2": 7.9,
+    "7.3": 7.9,
+    "7.4": 8.0,
+    "7.5": 8.0
+   }
+  },
+  "krb_gempa": {
+   "tingkat": 3,
+   "kelas": "Kawasan Rawan Bencana Gempabumi Tinggi"
+  },
+  "likuefaksi": {
+   "tingkat": 2,
+   "sumber": "resmi 1:100.000 (poligon kasar, dibatasi oleh material)"
+  },
+  "gerakan_tanah": {
+   "tingkat": 0,
+   "sumber": "resmi 1:50.000"
+  },
+  "tsunami": false,
+  "tanah_lunak": null,
+  "tingkat_keseluruhan": 3
+ },
+ "Parangtritis": {
+  "lat": -8.025,
+  "lon": 110.332,
+  "geologi": {
+   "kode": "Qa",
+   "formasi": "Alluvium",
+   "umur": "Kuarter"
+  },
+  "material": {
+   "kelas": "aluvium",
+   "nama": "Aluvium (endapan sungai/dataran)",
+   "catatan": "Sedimen Kuarter lepas hingga lunak. Memperbesar guncangan."
+  },
+  "vs30": 356,
+  "elevasi_m": 39,
+  "kemiringan": 0.0928,
+  "jarak_sesar_opak_km": 1.9,
+  "skenario": {
+   "M": 6.3,
+   "mmi": 8.3,
+   "pga_g": 0.49,
+   "pgv_cms": 48,
+   "mmi_per_m": {
+    "5.0": 6.3,
+    "5.1": 6.6,
+    "5.2": 6.8,
+    "5.3": 7.0,
+    "5.4": 7.3,
+    "5.5": 7.5,
+    "5.6": 7.6,
+    "5.7": 7.7,
+    "5.8": 7.8,
+    "5.9": 7.9,
+    "6.0": 8.0,
+    "6.1": 8.1,
+    "6.2": 8.2,
+    "6.3": 8.3,
+    "6.4": 8.3,
+    "6.5": 8.4,
+    "6.6": 8.4,
+    "6.7": 8.4,
+    "6.8": 8.5,
+    "6.9": 8.5,
+    "7.0": 8.6,
+    "7.1": 8.6,
+    "7.2": 8.7,
+    "7.3": 8.7,
+    "7.4": 8.7,
+    "7.5": 8.8
+   }
+  },
+  "krb_gempa": {
+   "tingkat": 3,
+   "kelas": "Kawasan Rawan Bencana Gempabumi Tinggi"
+  },
+  "likuefaksi": {
+   "tingkat": 3,
+   "sumber": "resmi 1:100.000 (poligon kasar, dibatasi oleh material)"
+  },
+  "gerakan_tanah": {
+   "tingkat": 0,
+   "sumber": "resmi 1:50.000"
+  },
+  "tsunami": false,
+  "tanah_lunak": null,
+  "tingkat_keseluruhan": 3
+ },
+ "Imogiri": {
+  "lat": -7.93,
+  "lon": 110.39,
+  "geologi": {
+   "kode": "Tmng",
+   "formasi": "Formasi Ngalanggran",
+   "umur": "Paleogen"
+  },
+  "material": {
+   "kelas": "tuf_breksi",
+   "nama": "Tuf dan breksi vulkanik Tersier",
+   "catatan": "Cukup keras, namun mudah lapuk dan longsor di lereng terjal."
+  },
+  "vs30": 543,
+  "elevasi_m": 46,
+  "kemiringan": 0.0419,
+  "jarak_sesar_opak_km": 2.2,
+  "skenario": {
+   "M": 6.3,
+   "mmi": 8.0,
+   "pga_g": 0.45,
+   "pgv_cms": 38,
+   "mmi_per_m": {
+    "5.0": 6.0,
+    "5.1": 6.2,
+    "5.2": 6.5,
+    "5.3": 6.7,
+    "5.4": 7.0,
+    "5.5": 7.2,
+    "5.6": 7.3,
+    "5.7": 7.5,
+    "5.8": 7.6,
+    "5.9": 7.7,
+    "6.0": 7.8,
+    "6.1": 7.9,
+    "6.2": 8.0,
+    "6.3": 8.0,
+    "6.4": 8.1,
+    "6.5": 8.1,
+    "6.6": 8.2,
+    "6.7": 8.2,
+    "6.8": 8.3,
+    "6.9": 8.3,
+    "7.0": 8.3,
+    "7.1": 8.4,
+    "7.2": 8.4,
+    "7.3": 8.5,
+    "7.4": 8.5,
+    "7.5": 8.6
+   }
+  },
+  "krb_gempa": {
+   "tingkat": 3,
+   "kelas": "Kawasan Rawan Bencana Gempabumi Tinggi"
+  },
+  "likuefaksi": {
+   "tingkat": 1,
+   "sumber": "resmi 1:100.000 (poligon kasar, dibatasi oleh material)"
+  },
+  "gerakan_tanah": {
+   "tingkat": 1,
+   "sumber": "resmi 1:50.000"
+  },
+  "tsunami": false,
+  "tanah_lunak": null,
+  "tingkat_keseluruhan": 3
+ },
+ "Prambanan": {
+  "lat": -7.752,
+  "lon": 110.491,
+  "geologi": {
+   "kode": "Qvu3",
+   "formasi": "Undifferentiated Volcanic Rock",
+   "umur": "Kuarter"
+  },
+  "material": {
+   "kelas": "vulkanik_muda",
+   "nama": "Endapan gunung api muda (Merapi)",
+   "catatan": "Pasir, kerikil, dan abu vulkanik yang belum padat."
+  },
+  "vs30": 362,
+  "elevasi_m": 153,
+  "kemiringan": 0.01,
+  "jarak_sesar_opak_km": 6.4,
+  "skenario": {
+   "M": 6.3,
+   "mmi": 7.7,
+   "pga_g": 0.35,
+   "pgv_cms": 33,
+   "mmi_per_m": {
+    "5.0": 5.6,
+    "5.1": 5.9,
+    "5.2": 6.1,
+    "5.3": 6.4,
+    "5.4": 6.6,
+    "5.5": 6.9,
+    "5.6": 7.0,
+    "5.7": 7.1,
+    "5.8": 7.2,
+    "5.9": 7.3,
+    "6.0": 7.5,
+    "6.1": 7.6,
+    "6.2": 7.7,
+    "6.3": 7.7,
+    "6.4": 7.8,
+    "6.5": 7.8,
+    "6.6": 7.9,
+    "6.7": 7.9,
+    "6.8": 8.0,
+    "6.9": 8.0,
+    "7.0": 8.1,
+    "7.1": 8.2,
+    "7.2": 8.2,
+    "7.3": 8.3,
+    "7.4": 8.3,
+    "7.5": 8.4
+   }
+  },
+  "krb_gempa": {
+   "tingkat": 2,
+   "kelas": "Kawasan Rawan Bencana Gempabumi Menengah"
+  },
+  "likuefaksi": {
+   "tingkat": 2,
+   "sumber": "resmi 1:100.000 (poligon kasar, dibatasi oleh material)"
+  },
+  "gerakan_tanah": {
+   "tingkat": 0,
+   "sumber": "resmi 1:50.000"
+  },
+  "tsunami": false,
+  "tanah_lunak": null,
+  "tingkat_keseluruhan": 2
+ },
+ "Sleman": {
+  "lat": -7.716,
+  "lon": 110.355,
+  "geologi": {
+   "kode": "Qvu3",
+   "formasi": "Undifferentiated Volcanic Rock",
+   "umur": "Kuarter"
+  },
+  "material": {
+   "kelas": "vulkanik_muda",
+   "nama": "Endapan gunung api muda (Merapi)",
+   "catatan": "Pasir, kerikil, dan abu vulkanik yang belum padat."
+  },
+  "vs30": 379,
+  "elevasi_m": 204,
+  "kemiringan": 0.018,
+  "jarak_sesar_opak_km": 21.6,
+  "skenario": {
+   "M": 6.3,
+   "mmi": 6.4,
+   "pga_g": 0.15,
+   "pgv_cms": 13,
+   "mmi_per_m": {
+    "5.0": 4.2,
+    "5.1": 4.4,
+    "5.2": 4.6,
+    "5.3": 4.8,
+    "5.4": 5.0,
+    "5.5": 5.3,
+    "5.6": 5.4,
+    "5.7": 5.6,
+    "5.8": 5.7,
+    "5.9": 5.9,
+    "6.0": 6.0,
+    "6.1": 6.1,
+    "6.2": 6.3,
+    "6.3": 6.4,
+    "6.4": 6.4,
+    "6.5": 6.5,
+    "6.6": 6.6,
+    "6.7": 6.7,
+    "6.8": 6.8,
+    "6.9": 6.8,
+    "7.0": 6.9,
+    "7.1": 7.0,
+    "7.2": 7.1,
+    "7.3": 7.1,
+    "7.4": 7.2,
+    "7.5": 7.3
+   }
+  },
+  "krb_gempa": {
+   "tingkat": 0,
+   "kelas": "Kawasan Rawan Bencana Gempabumi Sangat Rendah"
+  },
+  "likuefaksi": {
+   "tingkat": 1,
+   "sumber": "perkiraan dari material"
+  },
+  "gerakan_tanah": {
+   "tingkat": 0,
+   "sumber": "resmi 1:50.000"
+  },
+  "tsunami": false,
+  "tanah_lunak": null,
+  "tingkat_keseluruhan": 1
+ },
+ "Kaliurang": {
+  "lat": -7.6,
+  "lon": 110.427,
+  "geologi": {
+   "kode": "Qvu3",
+   "formasi": "Undifferentiated Volcanic Rock",
+   "umur": "Kuarter"
+  },
+  "material": {
+   "kelas": "vulkanik_muda",
+   "nama": "Endapan gunung api muda (Merapi)",
+   "catatan": "Pasir, kerikil, dan abu vulkanik yang belum padat."
+  },
+  "vs30": 435,
+  "elevasi_m": 862,
+  "kemiringan": 0.1237,
+  "jarak_sesar_opak_km": 24.0,
+  "skenario": {
+   "M": 6.3,
+   "mmi": 6.1,
+   "pga_g": 0.13,
+   "pgv_cms": 10,
+   "mmi_per_m": {
+    "5.0": 4.0,
+    "5.1": 4.2,
+    "5.2": 4.4,
+    "5.3": 4.6,
+    "5.4": 4.8,
+    "5.5": 5.0,
+    "5.6": 5.2,
+    "5.7": 5.3,
+    "5.8": 5.5,
+    "5.9": 5.6,
+    "6.0": 5.7,
+    "6.1": 5.9,
+    "6.2": 6.0,
+    "6.3": 6.1,
+    "6.4": 6.2,
+    "6.5": 6.3,
+    "6.6": 6.4,
+    "6.7": 6.4,
+    "6.8": 6.5,
+    "6.9": 6.6,
+    "7.0": 6.7,
+    "7.1": 6.8,
+    "7.2": 6.8,
+    "7.3": 6.9,
+    "7.4": 7.0,
+    "7.5": 7.1
+   }
+  },
+  "krb_gempa": {
+   "tingkat": 2,
+   "kelas": "Kawasan Rawan Bencana Gempabumi Menengah"
+  },
+  "likuefaksi": {
+   "tingkat": 1,
+   "sumber": "perkiraan dari material"
+  },
+  "gerakan_tanah": {
+   "tingkat": 1,
+   "sumber": "resmi 1:50.000"
+  },
+  "tsunami": false,
+  "tanah_lunak": null,
+  "tingkat_keseluruhan": 2
+ },
+ "Wates": {
+  "lat": -7.862,
+  "lon": 110.158,
+  "geologi": {
+   "kode": "Qa",
+   "formasi": "Alluvium",
+   "umur": "Kuarter"
+  },
+  "material": {
+   "kelas": "aluvium",
+   "nama": "Aluvium (endapan sungai/dataran)",
+   "catatan": "Sedimen Kuarter lepas hingga lunak. Memperbesar guncangan."
+  },
+  "vs30": 246,
+  "elevasi_m": 24,
+  "kemiringan": 0.0019,
+  "jarak_sesar_opak_km": 24.2,
+  "skenario": {
+   "M": 6.3,
+   "mmi": 6.5,
+   "pga_g": 0.15,
+   "pgv_cms": 14,
+   "mmi_per_m": {
+    "5.0": 4.3,
+    "5.1": 4.5,
+    "5.2": 4.7,
+    "5.3": 4.9,
+    "5.4": 5.2,
+    "5.5": 5.4,
+    "5.6": 5.6,
+    "5.7": 5.7,
+    "5.8": 5.9,
+    "5.9": 6.0,
+    "6.0": 6.1,
+    "6.1": 6.3,
+    "6.2": 6.4,
+    "6.3": 6.5,
+    "6.4": 6.6,
+    "6.5": 6.6,
+    "6.6": 6.7,
+    "6.7": 6.8,
+    "6.8": 6.8,
+    "6.9": 6.9,
+    "7.0": 7.0,
+    "7.1": 7.1,
+    "7.2": 7.1,
+    "7.3": 7.2,
+    "7.4": 7.3,
+    "7.5": 7.4
+   }
+  },
+  "krb_gempa": {
+   "tingkat": 2,
+   "kelas": "Kawasan Rawan Bencana Gempabumi Menengah"
+  },
+  "likuefaksi": {
+   "tingkat": 2,
+   "sumber": "resmi 1:50.000"
+  },
+  "gerakan_tanah": {
+   "tingkat": 0,
+   "sumber": "resmi 1:50.000"
+  },
+  "tsunami": false,
+  "tanah_lunak": null,
+  "tingkat_keseluruhan": 2
+ },
+ "Wonosari": {
+  "lat": -7.965,
+  "lon": 110.6,
+  "geologi": {
+   "kode": "Tmwl",
+   "formasi": "Wonosari Formation",
+   "umur": "Neogen"
+  },
+  "material": {
+   "kelas": "gamping",
+   "nama": "Batugamping (karst)",
+   "catatan": "Keras. Waspada runtuhan gua/dolina."
+  },
+  "vs30": 633,
+  "elevasi_m": 182,
+  "kemiringan": 0.0072,
+  "jarak_sesar_opak_km": 15.6,
+  "skenario": {
+   "M": 6.3,
+   "mmi": 6.4,
+   "pga_g": 0.15,
+   "pgv_cms": 12,
+   "mmi_per_m": {
+    "5.0": 4.2,
+    "5.1": 4.5,
+    "5.2": 4.7,
+    "5.3": 4.9,
+    "5.4": 5.1,
+    "5.5": 5.3,
+    "5.6": 5.5,
+    "5.7": 5.6,
+    "5.8": 5.8,
+    "5.9": 5.9,
+    "6.0": 6.0,
+    "6.1": 6.2,
+    "6.2": 6.3,
+    "6.3": 6.4,
+    "6.4": 6.4,
+    "6.5": 6.5,
+    "6.6": 6.6,
+    "6.7": 6.7,
+    "6.8": 6.7,
+    "6.9": 6.8,
+    "7.0": 6.9,
+    "7.1": 7.0,
+    "7.2": 7.0,
+    "7.3": 7.1,
+    "7.4": 7.2,
+    "7.5": 7.2
+   }
+  },
+  "krb_gempa": {
+   "tingkat": 2,
+   "kelas": "Kawasan Rawan Bencana Gempabumi Menengah"
+  },
+  "likuefaksi": {
+   "tingkat": 0,
+   "sumber": "perkiraan dari material"
+  },
+  "gerakan_tanah": {
+   "tingkat": 0,
+   "sumber": "resmi 1:50.000"
+  },
+  "tsunami": false,
+  "tanah_lunak": null,
+  "tingkat_keseluruhan": 2
+ }
+}

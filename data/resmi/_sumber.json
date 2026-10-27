@@ -1,0 +1,43 @@
+{
+ "sumber": "https://geoportal.esdm.go.id/gis4/rest/services/",
+ "bbox": "110.0,-8.2,110.7,-7.5",
+ "diambil": "2026-10-27",
+ "layer": {
+  "litologi_100k": {
+   "layanan": "BGS_PM/Geologi_Litologi",
+   "jumlah_fitur": 131
+  },
+  "krb_gempa_50k": {
+   "layanan": "BGV_GT/KRB_Gempa_Bumi",
+   "jumlah_fitur": 8
+  },
+  "likuefaksi_100k": {
+   "layanan": "BGE_GT/Kerentanan_Likuefaksi",
+   "jumlah_fitur": 2
+  },
+  "likuefaksi_50k": {
+   "layanan": "BGE_GT/Kerentanan_Likuefaksi_Skala_1_50000",
+   "jumlah_fitur": 7
+  },
+  "gerakan_tanah_50k": {
+   "layanan": "BGV_GT/Zona_Kerentanan_Gerakan_Tanah",
+   "jumlah_fitur": 4260
+  },
+  "krb_tsunami": {
+   "layanan": "BGV_GT/KRB_Tsunami",
+   "jumlah_fitur": 3
+  },
+  "tanah_lunak": {
+   "layanan": "BGE_GT/Sebaran_Tanah_Lunak_Indonesia",
+   "jumlah_fitur": 2
+  },
+  "patahan_aktif_1m": {
+   "layanan": "BGS_PM/Patahan_Aktif_Skala_Besar",
+   "jumlah_fitur": 10
+  },
+  "patahan_aktif_kecil": {
+   "layanan": "BGS_PM/Patahan_Aktif_Skala_Kecil",
+   "jumlah_fitur": 6
+  }
+ }
+}
