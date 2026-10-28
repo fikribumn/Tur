@@ -160,9 +160,9 @@ class MesinKerentanan {
   }
 
   /// Jarak (km) ke jejak Sesar Opak beserta titik terdekatnya (lat, lon).
-  (double, double, double) _jarakOpak(double lon, double lat) {
+  (double, double, double, double) _jarakOpak(double lon, double lat) {
     final kx = 111.32 * math.cos(lat * math.pi / 180), ky = 110.57;
-    var terbaik = double.infinity, tLat = lat, tLon = lon;
+    var terbaik = double.infinity, tLat = lat, tLon = lon, tArah = 0.0;
     for (final ln in _opak) {
       for (var k = 0; k < ln.length - 1; k++) {
         final ax = (ln[k][0] - lon) * kx, ay = (ln[k][1] - lat) * ky;
@@ -174,10 +174,11 @@ class MesinKerentanan {
           terbaik = d;
           tLat = lat + (ay + t * dy) / ky;
           tLon = lon + (ax + t * dx) / kx;
+          tArah = (math.atan2(dx, dy) * 180 / math.pi + 180) % 180;
         }
       }
     }
-    return (terbaik, tLat, tLon);
+    return (terbaik, tLat, tLon, tArah);
   }
 
   HasilLokasi analisis(double lat, double lon) {
@@ -189,7 +190,7 @@ class MesinKerentanan {
 
     final vsProxy = _vs30DariSlope(slope);
     final vs30 = mat != null ? 0.3 * vsProxy + 0.7 * (mat['vs30'] as num) : vsProxy;
-    final (dOpak, opakLat, opakLon) = _jarakOpak(lon, lat);
+    final (dOpak, opakLat, opakLon, opakArah) = _jarakOpak(lon, lat);
 
     final krb = _krb.cari(lon, lat);
     final krbKelas = krb.isEmpty ? null : krb.first['kelas'] as String;
@@ -243,6 +244,7 @@ class MesinKerentanan {
       jarakSesarKm: dOpak,
       sesarLat: opakLat,
       sesarLon: opakLon,
+      sesarArahDeg: opakArah,
       mekanisme: Mekanisme.mendatar,
       krbTingkat: krbLv,
       krbKelas: krbKelas,

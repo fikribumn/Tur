@@ -1,10 +1,12 @@
 // Tes widget: halaman Simulasi dijalankan sungguhan (peta, tombol, slider, lapisan). Butuh internet untuk ubin peta.
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zona_aman_gempa/mesin/gmpe.dart';
 import 'package:zona_aman_gempa/mesin/hasil.dart';
+import 'package:zona_aman_gempa/mesin/peta_geologi.dart';
 import 'package:zona_aman_gempa/simulasi_page.dart';
 
 HasilLokasi contohHasil({double lat = -7.888, double lon = 110.329, int lik = 2, int gt = 2}) => HasilLokasi(
@@ -26,6 +28,7 @@ HasilLokasi contohHasil({double lat = -7.888, double lon = 110.329, int lik = 2,
       jarakSesarKm: 10.2,
       sesarLat: -7.85,
       sesarLon: 110.42,
+      sesarArahDeg: 20,
       mekanisme: Mekanisme.mendatar,
       krbTingkat: 3,
       krbKelas: 'Kawasan Rawan Bencana Gempabumi Tinggi',
@@ -42,12 +45,24 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   HttpOverrides.global = null;
 
+  // PNG 1x1 valid + grid seragam: peta guncangan deterministik tanpa jaringan
+  final png1x1 = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+  var jumlahMuatGeo = 0;
   Future<void> buka(WidgetTester t, {HasilLokasi? h, Future<HasilLokasi> Function(double, double)? analisis}) async {
+    jumlahMuatGeo = 0;
     t.view.physicalSize = const Size(1080, 7000); // tinggi agar seluruh isi panel (ListView lazy) ikut dibangun
     t.view.devicePixelRatio = 2.75;
     addTearDown(t.view.reset);
     await t.pumpWidget(MaterialApp(
-        home: SimulasiPage(lokasi: h ?? contohHasil(), analisis: analisis ?? (la, lo) async => contohHasil(lat: la, lon: lo))));
+        home: SimulasiPage(
+      lokasi: h ?? contohHasil(),
+      analisis: analisis ?? (la, lo) async => contohHasil(lat: la, lon: lo),
+      muatGeologi: (la, lo, r) async {
+        jumlahMuatGeo++;
+        return GridVs30.seragam(la, lo, r, 30, 300);
+      },
+      enkode: (rgba, w, hh) async => png1x1,
+    )));
     await t.pump(const Duration(milliseconds: 600));
   }
 
@@ -57,6 +72,9 @@ void main() {
     expect(find.textContaining('Titikmu berada'), findsOneWidget);
     expect(find.textContaining('MMI '), findsWidgets);
     expect(find.textContaining('PGA'), findsOneWidget);
+    expect(find.textContaining('retakan sepanjang'), findsOneWidget);
+    expect(find.text('Peta guncangan (MMI)'), findsOneWidget);
+    expect(jumlahMuatGeo, 1); // geologi sekitar sumber diambil sekali
     expect(find.byIcon(Icons.crisis_alert), findsWidgets); // penanda sumber
     expect(find.byIcon(Icons.location_on), findsWidgets); // penanda titikku
     expect(tester(t), isNull);
@@ -82,6 +100,32 @@ void main() {
     await t.pump();
     final akhir = (t.widget<Text>(find.textContaining('MMI ').first)).data;
     expect(awal != null && akhir != null, isTrue);
+    expect(tester(t), isNull);
+  });
+
+  testWidgets('slider arah sesar mengubah retakan tanpa mengambil geologi lagi', (t) async {
+    await buka(t);
+    expect(find.textContaining('Arah sesar 20°'), findsOneWidget); // default dari arah sesar terdekat
+    await t.drag(find.byKey(const Key('slider-strike')), const Offset(200, 0));
+    await t.pump(const Duration(milliseconds: 400));
+    expect(find.textContaining('Arah sesar 20°'), findsNothing);
+    expect(jumlahMuatGeo, 1); // hanya hitung ulang, geologi tetap
+    expect(tester(t), isNull);
+  });
+
+  testWidgets('geologi dimuat ulang hanya saat tingkat jendela berubah', (t) async {
+    await buka(t);
+    final slider = find.byKey(const Key('slider-magnitudo'));
+    expect(jumlahMuatGeo, 1); // M6,5 awal: jendela 250 km
+    await t.drag(slider, const Offset(900, 0)); // M8,5: tetap jendela 250 km (batas atas)
+    await t.pump(const Duration(milliseconds: 400));
+    expect(jumlahMuatGeo, 1, reason: 'jendela sama, tidak perlu unduh ulang');
+    await t.drag(slider, const Offset(-900, 0)); // M4,5: jendela 40 km
+    await t.pump(const Duration(milliseconds: 400));
+    expect(jumlahMuatGeo, 2, reason: 'jendela menyempit -> geologi diambil lagi');
+    await t.drag(slider, const Offset(900, 0)); // kembali besar: jendela 250 km
+    await t.pump(const Duration(milliseconds: 400));
+    expect(jumlahMuatGeo, 3);
     expect(tester(t), isNull);
   });
 

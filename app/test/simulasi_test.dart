@@ -15,7 +15,7 @@ void main() {
   });
 
   test('radius zona: MMI lebih tinggi -> radius lebih kecil; magnitudo lebih besar -> radius lebih besar', () {
-    final r = [for (final t in tingkatCincin) radiusMmiKm(7.0, t, Mekanisme.mendatar)];
+    final r = [for (final t in [6, 7, 8, 9]) radiusMmiKm(7.0, t, Mekanisme.mendatar)];
     for (var i = 0; i < r.length - 1; i++) {
       if (r[i] != null && r[i + 1] != null) expect(r[i]!, greaterThan(r[i + 1]!));
     }

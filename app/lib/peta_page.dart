@@ -6,6 +6,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+import 'peta_umum.dart';
+
 /// Hasil pemilihan: koordinat dan label yang ditampilkan di kartu lokasi.
 class LokasiPilihan {
   final double lat, lon;
@@ -114,7 +116,9 @@ class _PetaPageState extends State<PetaPage> {
             options: MapOptions(
               initialCenter: awal,
               initialZoom: 9,
-              minZoom: 3,
+              minZoom: zoomMin,
+              maxZoom: zoomMaks,
+              interactionOptions: opsiInteraksi,
               onTap: (_, p) => setState(() {
                 _titik = p;
                 _nama = null;
@@ -143,6 +147,7 @@ class _PetaPageState extends State<PetaPage> {
               ),
             ],
           ),
+          Positioned(right: 12, bottom: 12, child: TombolZoom(kontrol: _peta)),
           Positioned(
             left: 12,
             right: 12,

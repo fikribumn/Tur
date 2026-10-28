@@ -34,6 +34,9 @@ class HasilLokasi {
 
   /// Titik pada jejak sesar yang paling dekat dengan lokasi (untuk menaruh sumber simulasi).
   final double? sesarLat, sesarLon;
+
+  /// Arah jejak sesar di titik terdekat (derajat dari utara, 0-180).
+  final double? sesarArahDeg;
   final Mekanisme mekanisme;
   final int? krbTingkat, likTingkat, gtTingkat, tsunamiTingkat, tingkatKeseluruhan;
   final String? krbKelas, tanahLunak;
@@ -58,6 +61,7 @@ class HasilLokasi {
     required this.jarakSesarKm,
     this.sesarLat,
     this.sesarLon,
+    this.sesarArahDeg,
     required this.mekanisme,
     required this.krbTingkat,
     required this.krbKelas,

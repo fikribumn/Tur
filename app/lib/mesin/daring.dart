@@ -55,8 +55,8 @@ class GalatJaringan implements Exception {
 
 class _Sesar {
   final String nama, status;
-  final double jarakKm, lat, lon;
-  const _Sesar(this.nama, this.status, this.jarakKm, this.lat, this.lon);
+  final double jarakKm, lat, lon, arahDeg;
+  const _Sesar(this.nama, this.status, this.jarakKm, this.lat, this.lon, this.arahDeg);
 }
 
 class MesinDaring {
@@ -138,7 +138,7 @@ class MesinDaring {
             final a = f['attributes'] as Map;
             terbaik = _Sesar((a['namobj'] as String?)?.replaceAll(RegExp(r'\s+'), ' ').trim() ?? 'Sesar tanpa nama',
                 (a['klspthn'] as String?) ?? '-', jarak,
-                lat + (ay + t * dy) / ky, lon + (ax + t * dx) / kx);
+                lat + (ay + t * dy) / ky, lon + (ax + t * dx) / kx, (math.atan2(dx, dy) * 180 / math.pi + 180) % 180);
           }
         }
       }
@@ -254,6 +254,7 @@ class MesinDaring {
       jarakSesarKm: sesar?.jarakKm,
       sesarLat: sesar?.lat,
       sesarLon: sesar?.lon,
+      sesarArahDeg: sesar?.arahDeg,
       mekanisme: sesar == null ? Mekanisme.takDiketahui : Mekanisme.dariNama(sesar.nama),
       krbTingkat: krbLv,
       krbKelas: krbKelas,

@@ -1,24 +1,26 @@
-// Menu Simulasi: taruh sumber gempa (merah) dan titikmu (biru) di peta, atur magnitudo/kedalaman,
-// lihat cincin zona guncangan dan dampak di titikmu. Lapisan zonasi resmi Badan Geologi bisa dinyalakan.
+// Menu Simulasi: taruh sumber gempa (merah) dan titikmu (biru) di peta, atur magnitudo/kedalaman/arah sesar.
+// Area terdampak digambar sebagai peta guncangan per titik: tiap sel dihitung dari jarak ke retakan memanjang
+// dan Vs30 setempat (peta geologi resmi), jadi bentuknya mengikuti sesar dan jenis tanah, bukan lingkaran.
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+import 'mesin/bidang_guncangan.dart';
 import 'mesin/gmpe.dart';
 import 'mesin/hasil.dart';
+import 'mesin/peta_geologi.dart';
 import 'mesin/simulasi.dart';
+import 'peta_umum.dart';
 
 const _romawi = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 String _rom(double m) => _romawi[m.round().clamp(1, 10)];
-
-const _warnaCincin = {
-  6: Color(0xFFE0B020),
-  7: Color(0xFFE8902A),
-  8: Color(0xFFE05030),
-  9: Color(0xFFA01820),
-};
 
 /// Lapisan zonasi resmi (ArcGIS MapServer) yang bisa ditampilkan sebagai ubin.
 const _lapisan = {
@@ -32,7 +34,7 @@ const _lapisan = {
 class _ZonasiTileProvider extends NetworkTileProvider {
   final String layanan;
   _ZonasiTileProvider(this.layanan)
-      : super(silenceExceptions: true, headers: {'User-Agent': 'TERRA-TUR/1.3 (riset kerentanan gempa)'}); // bukan const: TileLayer menambah header
+      : super(silenceExceptions: true, headers: {'User-Agent': 'TERRA-TUR/1.4 (riset kerentanan gempa)'}); // bukan const: TileLayer menambah header
 
   @override
   String getTileUrl(TileCoordinates c, TileLayer options) {
@@ -53,7 +55,12 @@ class SimulasiPage extends StatefulWidget {
 
   /// Menganalisis ulang bila pengguna memindahkan titiknya (data zonasi dan jenis tanah ikut berubah).
   final Future<HasilLokasi> Function(double lat, double lon) analisis;
-  const SimulasiPage({super.key, required this.lokasi, required this.analisis});
+
+  /// Pengambil grid geologi dan pengubah piksel ke PNG; bisa diganti pada tes.
+  final Future<GridVs30> Function(double lat, double lon, double radiusKm)? muatGeologi;
+  final Future<Uint8List> Function(Uint8List rgba, int lebar, int tinggi)? enkode;
+
+  const SimulasiPage({super.key, required this.lokasi, required this.analisis, this.muatGeologi, this.enkode});
 
   @override
   State<SimulasiPage> createState() => _SimulasiPageState();
@@ -62,6 +69,7 @@ class SimulasiPage extends StatefulWidget {
 class _SimulasiPageState extends State<SimulasiPage> {
   late HasilLokasi _site = widget.lokasi;
   late LatLng _src;
+  late double _strike;
   double _m = 6.5, _dalam = 10;
   Mekanisme _mek = Mekanisme.takDiketahui;
   _Mode _mode = _Mode.sumber;
@@ -69,13 +77,35 @@ class _SimulasiPageState extends State<SimulasiPage> {
   bool _menganalisis = false;
   final _peta = MapController();
 
+  // peta guncangan
+  final _klien = http.Client();
+  PemuatGeologi? _pemuat;
+  GridVs30? _geo;
+  double _geoJendela = 0;
+  LatLng? _geoPusat;
+  bool _geoCadangan = false; // true bila geologi gagal diambil dan grid seragam dipakai
+  bool _memuatGeo = false;
+  Uint8List? _png;
+  GridVs30? _gridTampil;
+  Timer? _tunda;
+  int _versi = 0;
+
   @override
   void initState() {
     super.initState();
     _src = _awalSumber(widget.lokasi);
+    _strike = widget.lokasi.sesarArahDeg ?? 0;
     if (widget.lokasi.jarakSesarKm != null && widget.lokasi.mekanisme != Mekanisme.takDiketahui) {
       _mek = widget.lokasi.mekanisme;
     }
+    _jadwalkan();
+  }
+
+  @override
+  void dispose() {
+    _tunda?.cancel();
+    _klien.close();
+    super.dispose();
   }
 
   /// Sumber awal: titik sesar terdekat bila ada, jika tidak 30 km ke timur titikmu.
@@ -92,8 +122,10 @@ class _SimulasiPageState extends State<SimulasiPage> {
     setState(() {
       _src = LatLng(s.sesarLat!, s.sesarLon!);
       if (s.mekanisme != Mekanisme.takDiketahui) _mek = s.mekanisme;
+      if (s.sesarArahDeg != null) _strike = s.sesarArahDeg!;
     });
     _peta.move(_src, math.max(_peta.camera.zoom, 9));
+    _jadwalkan();
   }
 
   Future<void> _aturTitikku(LatLng p) async {
@@ -112,9 +144,69 @@ class _SimulasiPageState extends State<SimulasiPage> {
     if (_menganalisis) return;
     if (_mode == _Mode.sumber) {
       setState(() => _src = p);
+      _jadwalkan();
     } else {
       _aturTitikku(p);
     }
+  }
+
+  /// Hitung ulang peta guncangan setelah jeda singkat, agar geseran slider tidak memicu hitungan di tiap piksel.
+  void _jadwalkan() {
+    _tunda?.cancel();
+    _tunda = Timer(const Duration(milliseconds: 180), _perbarui);
+  }
+
+  Future<GridVs30> _ambilGeologi(double lat, double lon, double radiusKm) async {
+    if (widget.muatGeologi != null) return widget.muatGeologi!(lat, lon, radiusKm);
+    if (_pemuat == null) {
+      final lito = jsonDecode(await rootBundle.loadString('assets/data/litologi_dampak.json')) as Map<String, dynamic>;
+      _pemuat = PemuatGeologi(
+          _klien, Map<String, dynamic>.from(lito['kelas'] as Map), Map<String, dynamic>.from(lito['pemetaan_simobj'] as Map));
+    }
+    return _pemuat!.muat(lat, lon, radiusKm);
+  }
+
+  Future<void> _perbarui() async {
+    final versi = ++_versi;
+    if (_dalam > kedalamanMaksKm) {
+      if (mounted) {
+        setState(() {
+          _png = null;
+          _memuatGeo = false;
+        });
+      }
+      return;
+    }
+    final m = _m, mek = _mek, strike = _strike, src = _src;
+    final jendela = pilihJendelaKm(radiusJangkauanKm(m, mek));
+    final perluMuat = _geo == null ||
+        _geoJendela != jendela ||
+        jarakKm(src.latitude, src.longitude, _geoPusat!.latitude, _geoPusat!.longitude) > jendela * 0.25;
+
+    if (perluMuat) {
+      if (mounted) setState(() => _memuatGeo = true);
+      try {
+        _geo = await _ambilGeologi(src.latitude, src.longitude, jendela);
+        _geoCadangan = false;
+      } catch (_) {
+        _geo = GridVs30.seragam(src.latitude, src.longitude, jendela, 110, _site.vs30);
+        _geoCadangan = true;
+      }
+      _geoJendela = jendela;
+      _geoPusat = src;
+    }
+    if (versi != _versi || !mounted) return; // ada pembaruan yang lebih baru
+
+    final seg = segmenRuptur(src.latitude, src.longitude, panjangRupturKm(m, mek), strike);
+    final bidang = hitungBidang(_geo!, seg: seg, m: m, mek: mek);
+    final enkode = widget.enkode ?? kePng;
+    final png = await enkode(warnaRgba(bidang), _geo!.nx, _geo!.ny);
+    if (versi != _versi || !mounted) return;
+    setState(() {
+      _png = png;
+      _gridTampil = _geo;
+      _memuatGeo = false;
+    });
   }
 
   HasilSimulasi get _sim => simulasikan(
@@ -126,13 +218,14 @@ class _SimulasiPageState extends State<SimulasiPage> {
         kedalamanKm: _dalam,
         vs30: _site.vs30,
         mekanisme: _mek,
+        arahSesarDeg: _strike,
       );
 
   @override
   Widget build(BuildContext context) {
     final sim = _sim;
     final site = LatLng(_site.lat, _site.lon);
-    final tengah = LatLng((site.latitude + _src.latitude) / 2, (site.longitude + _src.longitude) / 2);
+    final seg = sim.segmen;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Simulasi gempa')),
@@ -147,7 +240,9 @@ class _SimulasiPageState extends State<SimulasiPage> {
                   options: MapOptions(
                     initialCameraFit: CameraFit.coordinates(
                         coordinates: [site, _src], padding: const EdgeInsets.all(70), maxZoom: 10),
-                    minZoom: 3,
+                    minZoom: zoomMin,
+                    maxZoom: zoomMaks,
+                    interactionOptions: opsiInteraksi,
                     onTap: (_, p) => _ketuk(p),
                   ),
                   children: [
@@ -166,18 +261,27 @@ class _SimulasiPageState extends State<SimulasiPage> {
                             maxNativeZoom: 16,
                           ),
                         ),
-                    if (sim.berlaku) CircleLayer(circles: _cincin()),
+                    if (sim.berlaku && _png != null && _gridTampil != null)
+                      OverlayImageLayer(overlayImages: [
+                        OverlayImage(
+                          bounds: LatLngBounds(LatLng(_gridTampil!.lat0, _gridTampil!.lon0), LatLng(_gridTampil!.lat1, _gridTampil!.lon1)),
+                          imageProvider: MemoryImage(_png!),
+                          opacity: 0.9,
+                          filterQuality: FilterQuality.high,
+                          gaplessPlayback: true,
+                        ),
+                      ]),
                     PolylineLayer(polylines: [
+                      Polyline(points: [_src, site], strokeWidth: 2.5, color: Colors.black87, pattern: StrokePattern.dashed(segments: const [10, 8])),
                       Polyline(
-                        points: [_src, site],
-                        strokeWidth: 2.5,
-                        color: Colors.black87,
-                        pattern: StrokePattern.dashed(segments: const [10, 8]),
+                        points: [LatLng(seg.lat1, seg.lon1), LatLng(seg.lat2, seg.lon2)],
+                        strokeWidth: 5,
+                        color: const Color(0xFFD23B3B),
                       ),
                     ]),
                     MarkerLayer(markers: [
                       Marker(
-                        point: tengah,
+                        point: LatLng((site.latitude + _src.latitude) / 2, (site.longitude + _src.longitude) / 2),
                         width: 110,
                         height: 28,
                         child: Container(
@@ -187,12 +291,7 @@ class _SimulasiPageState extends State<SimulasiPage> {
                               style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.w600)),
                         ),
                       ),
-                      Marker(
-                        point: _src,
-                        width: 44,
-                        height: 44,
-                        child: const Icon(Icons.crisis_alert, size: 40, color: Color(0xFFD23B3B)),
-                      ),
+                      Marker(point: _src, width: 44, height: 44, child: const Icon(Icons.crisis_alert, size: 40, color: Color(0xFFD23B3B))),
                       Marker(
                         point: site,
                         width: 48,
@@ -205,7 +304,7 @@ class _SimulasiPageState extends State<SimulasiPage> {
                       alignment: AttributionAlignment.bottomLeft,
                       attributions: [
                         TextSourceAttribution('© kontributor OpenStreetMap'),
-                        TextSourceAttribution('Zonasi: Badan Geologi (ESDM)'),
+                        TextSourceAttribution('Geologi & zonasi: Badan Geologi (ESDM)'),
                       ],
                     ),
                   ],
@@ -220,18 +319,26 @@ class _SimulasiPageState extends State<SimulasiPage> {
                     color: Theme.of(context).colorScheme.surface,
                     child: Padding(
                       padding: const EdgeInsets.all(6),
-                      child: SegmentedButton<_Mode>(
-                        showSelectedIcon: false,
-                        segments: const [
-                          ButtonSegment(value: _Mode.sumber, icon: Icon(Icons.crisis_alert), label: Text('Atur sumber')),
-                          ButtonSegment(value: _Mode.titikku, icon: Icon(Icons.location_on), label: Text('Atur titikku')),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SegmentedButton<_Mode>(
+                            showSelectedIcon: false,
+                            segments: const [
+                              ButtonSegment(value: _Mode.sumber, icon: Icon(Icons.crisis_alert), label: Text('Atur sumber')),
+                              ButtonSegment(value: _Mode.titikku, icon: Icon(Icons.location_on), label: Text('Atur titikku')),
+                            ],
+                            selected: {_mode},
+                            onSelectionChanged: (s) => setState(() => _mode = s.first),
+                          ),
+                          if (_memuatGeo)
+                            const Padding(padding: EdgeInsets.only(top: 6), child: LinearProgressIndicator(minHeight: 3)),
                         ],
-                        selected: {_mode},
-                        onSelectionChanged: (s) => setState(() => _mode = s.first),
                       ),
                     ),
                   ),
                 ),
+                Positioned(right: 8, bottom: 28, child: TombolZoom(kontrol: _peta)),
                 if (_menganalisis)
                   const Positioned.fill(child: ColoredBox(color: Color(0x55000000), child: Center(child: CircularProgressIndicator()))),
               ],
@@ -243,23 +350,26 @@ class _SimulasiPageState extends State<SimulasiPage> {
     );
   }
 
-  List<CircleMarker> _cincin() {
-    final out = <CircleMarker>[];
-    for (final t in tingkatCincin) {
-      final r = radiusMmiKm(_m, t, _mek);
-      if (r == null) continue;
-      final w = _warnaCincin[t]!;
-      out.add(CircleMarker(
-        point: _src,
-        radius: r * 1000,
-        useRadiusInMeter: true,
-        color: w.withValues(alpha: 0.18),
-        borderColor: w,
-        borderStrokeWidth: 1.5,
-      ));
-    }
-    // cincin terbesar digambar lebih dulu agar yang kecil tidak tertutup
-    return out;
+  Widget _legenda(BuildContext context) {
+    final kecil = Theme.of(context).textTheme.bodySmall;
+    return Row(
+      children: [
+        for (final t in [4, 5, 6, 7, 8, 9])
+          Expanded(
+            child: Column(children: [
+              Container(
+                height: 12,
+                margin: const EdgeInsets.symmetric(horizontal: 1),
+                color: () {
+                  final (r, g, b, a) = warnaMmi(t.toDouble());
+                  return Color.fromARGB(255, r, g, b).withValues(alpha: (a / 255).clamp(0.45, 1.0));
+                }(),
+              ),
+              Text(_romawi[t], style: kecil),
+            ]),
+          ),
+      ],
+    );
   }
 
   Widget _panel(BuildContext context, HasilSimulasi sim) {
@@ -272,7 +382,8 @@ class _SimulasiPageState extends State<SimulasiPage> {
       padding: const EdgeInsets.all(12),
       children: [
         // ringkasan hasil di paling atas agar langsung terlihat saat slider digeser
-        Text('Titikmu berada ${sim.jarakKm.toStringAsFixed(1)} km di arah ${namaArah(sim.arahDeg)} dari sumber.',
+        Text('Titikmu berada ${sim.jarakKm.toStringAsFixed(1)} km di arah ${namaArah(sim.arahDeg)} dari pusat sumber '
+            '(${sim.rjbKm.toStringAsFixed(1)} km dari retakan sepanjang ±${sim.panjangKm.round()} km).',
             style: tema.textTheme.titleSmall),
         const SizedBox(height: 6),
         if (!sim.berlaku)
@@ -307,12 +418,54 @@ class _SimulasiPageState extends State<SimulasiPage> {
         const SizedBox(height: 4),
         // kontrol
         Text('Magnitudo ${_m.toStringAsFixed(1)}', style: tema.textTheme.labelLarge),
-        Slider(key: const Key('slider-magnitudo'), min: 4.5, max: 8.5, divisions: 40, value: _m, label: _m.toStringAsFixed(1), onChanged: (v) => setState(() => _m = v)),
+        Slider(
+          key: const Key('slider-magnitudo'),
+          min: 4.5,
+          max: 8.5,
+          divisions: 40,
+          value: _m,
+          label: _m.toStringAsFixed(1),
+          onChanged: (v) {
+            setState(() => _m = v);
+            _jadwalkan();
+          },
+        ),
         Text('Kedalaman ${_dalam.round()} km', style: tema.textTheme.labelLarge),
-        Slider(key: const Key('slider-kedalaman'), min: 5, max: 100, divisions: 19, value: _dalam, label: '${_dalam.round()} km', onChanged: (v) => setState(() => _dalam = v)),
+        Slider(
+          key: const Key('slider-kedalaman'),
+          min: 5,
+          max: 100,
+          divisions: 19,
+          value: _dalam,
+          label: '${_dalam.round()} km',
+          onChanged: (v) {
+            setState(() => _dalam = v);
+            _jadwalkan();
+          },
+        ),
+        Text('Arah sesar ${_strike.round()}° (0° = utara–selatan, 90° = barat–timur)', style: tema.textTheme.labelLarge),
+        Slider(
+          key: const Key('slider-strike'),
+          min: 0,
+          max: 180,
+          divisions: 36,
+          value: _strike.clamp(0, 180).toDouble(),
+          label: '${_strike.round()}°',
+          onChanged: (v) {
+            setState(() => _strike = v);
+            _jadwalkan();
+          },
+        ),
         Wrap(spacing: 8, children: [
           for (final m in Mekanisme.values)
-            ChoiceChip(label: Text(m.label), selected: _mek == m, onSelected: (_) => setState(() => _mek = m)),
+            ChoiceChip(
+              label: Text(m.label),
+              selected: _mek == m,
+              onSelected: (_) {
+                setState(() => _mek = m);
+                _jadwalkan();
+              },
+            ),
         ]),
         if (h.sesarLat != null)
           Align(
@@ -326,21 +479,18 @@ class _SimulasiPageState extends State<SimulasiPage> {
         const Divider(),
         if (sim.berlaku) ..._dampakTurunan(context, mmi!),
         const SizedBox(height: 8),
-        Text('Zona guncangan (cincin) untuk tanah sedang, Vs30 400 m/s:', style: tema.textTheme.labelLarge),
+        Text('Peta guncangan (MMI)', style: tema.textTheme.labelLarge),
         const SizedBox(height: 4),
-        Wrap(spacing: 12, runSpacing: 4, children: [
-          for (final t in tingkatCincin)
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 12, height: 12, decoration: BoxDecoration(color: _warnaCincin[t], shape: BoxShape.circle)),
-              const SizedBox(width: 4),
-              Text(
-                  () {
-                    final r = radiusMmiKm(_m, t, _mek);
-                    return r == null ? 'MMI ${_romawi[t]}: tidak tercapai' : 'MMI ${_romawi[t]}: ≤ ${r.toStringAsFixed(r < 10 ? 1 : 0)} km';
-                  }(),
-                  style: kecil),
-            ]),
-        ]),
+        _legenda(context),
+        const SizedBox(height: 4),
+        Text(
+            _geoCadangan
+                ? 'Geologi sekitar sumber tidak bisa diambil (periksa internet). Peta memakai Vs30 titikmu untuk semua area, '
+                    'jadi bentuknya hanya mengikuti sesar, bukan jenis tanah.'
+                : 'Tiap titik dihitung dari jarak ke retakan dan jenis tanah setempat (peta geologi Badan Geologi): tanah lunak '
+                    'menguat, batuan keras melemah. Laut dan area tanpa data tidak diwarnai. Peta dibatasi ±250 km dari sumber; '
+                    'pada magnitudo besar (M7,5+) guncangan sebenarnya meluas melampaui batas itu.',
+            style: kecil),
         const SizedBox(height: 12),
         Text('Lapisan zonasi resmi (Badan Geologi)', style: tema.textTheme.labelLarge),
         Wrap(spacing: 8, children: [
@@ -352,14 +502,13 @@ class _SimulasiPageState extends State<SimulasiPage> {
             ),
         ]),
         const SizedBox(height: 4),
-        Text(
-            'Warna lapisan mengikuti legenda resmi Badan Geologi; ubin dimuat dari server dan bisa lambat. '
+        Text('Warna lapisan mengikuti legenda resmi Badan Geologi; ubin dimuat dari server dan bisa lambat. '
             'Area tanpa warna belum tentu aman: bisa berarti belum terpetakan.',
             style: kecil),
         const SizedBox(height: 12),
         Text(
-            'Perkiraan model median (BSSA14 + Worden 2012) untuk sumber titik di kerak dangkal; gempa besar yang pecahannya panjang '
-            'akan lebih dekat daripada yang dihitung. Bukan alat keselamatan resmi.',
+            'Perkiraan model median (BSSA14 + Worden 2012) untuk retakan lurus di kerak dangkal; kelas tanah di luar DIY ditebak '
+            'dari nama dan umur formasi. Bukan alat keselamatan resmi.',
             style: kecil),
       ],
     );
