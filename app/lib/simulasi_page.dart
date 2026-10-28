@@ -610,7 +610,7 @@ class _SimulasiPageState extends State<SimulasiPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Gempa nyata BMKG · M${g.magnitudo.toStringAsFixed(1)} · ${g.kedalamanKm.round()} km',
+            Text('Gempa nyata (${g.sumber}) · M${g.magnitudo.toStringAsFixed(1)} · ${g.kedalamanKm.round()} km',
                 style: const TextStyle(fontWeight: FontWeight.w700)),
             Text('${g.wilayah} · ${g.waktuWib}'),
             const SizedBox(height: 4),

@@ -245,7 +245,7 @@ class _BerandaPageState extends State<BerandaPage> {
       appBar: AppBar(
         title: const Text('TERRA TUR'),
         actions: [
-          IconButton(tooltip: 'Gempa terkini BMKG', icon: const Icon(Icons.public), onPressed: _bukaKatalog),
+          IconButton(tooltip: 'Gempa terkini', icon: const Icon(Icons.public), onPressed: _bukaKatalog),
           IconButton(
             tooltip: 'Simulasi gempa',
             icon: const Icon(Icons.crisis_alert),
@@ -354,8 +354,8 @@ class _BerandaPageState extends State<BerandaPage> {
       Card(
         child: ListTile(
           leading: const Icon(Icons.public, color: Color(0xFF2F5FD0)),
-          title: const Text('Gempa terkini BMKG', style: TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: const Text('Lihat gempa terbaru, simulasikan, dan bandingkan dengan laporan dirasakan'),
+          title: const Text('Gempa terkini', style: TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: const Text('Gempa M4+ terbaru, yang terdekat denganmu, dan simulasinya'),
           trailing: const Icon(Icons.chevron_right),
           onTap: _bukaKatalog,
         ),
