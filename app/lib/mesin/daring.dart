@@ -53,10 +53,12 @@ class GalatJaringan implements Exception {
   String toString() => pesan;
 }
 
-class _Sesar {
+/// Sesar aktif terdekat (peta 1:1.000.000) beserta titik terdekat di jejaknya dan arah jejak di titik itu.
+class SesarDekat {
   final String nama, status;
   final double jarakKm, lat, lon, arahDeg;
-  const _Sesar(this.nama, this.status, this.jarakKm, this.lat, this.lon, this.arahDeg);
+  const SesarDekat(this.nama, this.status, this.jarakKm, this.lat, this.lon, this.arahDeg);
+  Mekanisme get mekanisme => Mekanisme.dariNama(nama);
 }
 
 class MesinDaring {
@@ -108,7 +110,7 @@ class MesinDaring {
     return [for (final f in (d['features'] as List?) ?? const []) Map<String, dynamic>.from(f['attributes'] as Map)];
   }
 
-  Future<_Sesar?> _sesarTerdekat(double lat, double lon) async {
+  Future<SesarDekat?> _sesarTerdekat(double lat, double lon) async {
     final d = await _ambil('BGS_PM/Patahan_Aktif_Skala_Besar', {
       'geometry': '$lon,$lat',
       'geometryType': 'esriGeometryPoint',
@@ -123,7 +125,7 @@ class MesinDaring {
     });
     if (d == null) return null;
     final kx = 111.32 * math.cos(lat * math.pi / 180), ky = 110.57;
-    _Sesar? terbaik;
+    SesarDekat? terbaik;
     for (final f in (d['features'] as List?) ?? const []) {
       final paths = (f['geometry']?['paths'] as List?) ?? const [];
       for (final ln in paths) {
@@ -136,7 +138,7 @@ class MesinDaring {
           final jarak = math.sqrt(math.pow(ax + t * dx, 2) + math.pow(ay + t * dy, 2));
           if (terbaik == null || jarak < terbaik.jarakKm) {
             final a = f['attributes'] as Map;
-            terbaik = _Sesar((a['namobj'] as String?)?.replaceAll(RegExp(r'\s+'), ' ').trim() ?? 'Sesar tanpa nama',
+            terbaik = SesarDekat((a['namobj'] as String?)?.replaceAll(RegExp(r'\s+'), ' ').trim() ?? 'Sesar tanpa nama',
                 (a['klspthn'] as String?) ?? '-', jarak,
                 lat + (ay + t * dy) / ky, lon + (ax + t * dx) / kx, (math.atan2(dx, dy) * 180 / math.pi + 180) % 180);
           }
@@ -145,6 +147,9 @@ class MesinDaring {
     }
     return terbaik;
   }
+
+  /// Sesar aktif terdekat dari sebuah titik (radius 150 km); null bila tidak ada atau jaringan gagal.
+  Future<SesarDekat?> sesarTerdekat(double lat, double lon) => _sesarTerdekat(lat, lon);
 
   Future<double?> _elevasi(double lat, double lon) async {
     try {
@@ -178,7 +183,7 @@ class MesinDaring {
     final gtSemua = h[4] as List<Map<String, dynamic>>?;
     final tsu = h[5] as Map<String, dynamic>?;
     final lunak = h[6] as Map<String, dynamic>?;
-    final sesar = h[7] as _Sesar?;
+    final sesar = h[7] as SesarDekat?;
     final elev = h[8] as double?;
 
     // Tanpa geologi maupun zonasi gempa, tidak ada yang bisa disimpulkan (kemungkinan besar tidak ada koneksi).

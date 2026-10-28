@@ -15,8 +15,10 @@ import 'package:latlong2/latlong.dart';
 import 'mesin/bidang_guncangan.dart';
 import 'mesin/gmpe.dart';
 import 'mesin/hasil.dart';
+import 'mesin/katalog_bmkg.dart';
 import 'mesin/peta_geologi.dart';
 import 'mesin/simulasi.dart';
+import 'mesin/validasi_bmkg.dart';
 import 'peta_umum.dart';
 
 const _romawi = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -60,7 +62,26 @@ class SimulasiPage extends StatefulWidget {
   final Future<GridVs30> Function(double lat, double lon, double radiusKm)? muatGeologi;
   final Future<Uint8List> Function(Uint8List rgba, int lebar, int tinggi)? enkode;
 
-  const SimulasiPage({super.key, required this.lokasi, required this.analisis, this.muatGeologi, this.enkode});
+  /// Gempa nyata dari katalog BMKG yang disimulasikan (null = simulasi bebas). Arah dan mekanisme sesar awal
+  /// diperkirakan dari sesar aktif terdekat di sekitar episentrum.
+  final GempaBmkg? gempa;
+  final double? awalStrike;
+  final Mekanisme? awalMek;
+
+  /// Pencari koordinat daerah untuk perbandingan dengan laporan dirasakan; bisa diganti pada tes.
+  final Future<(double, double)?> Function(String nama, double dekatLat, double dekatLon)? geokode;
+
+  const SimulasiPage({
+    super.key,
+    required this.lokasi,
+    required this.analisis,
+    this.muatGeologi,
+    this.enkode,
+    this.gempa,
+    this.awalStrike,
+    this.awalMek,
+    this.geokode,
+  });
 
   @override
   State<SimulasiPage> createState() => _SimulasiPageState();
@@ -90,6 +111,13 @@ class _SimulasiPageState extends State<SimulasiPage> {
   Timer? _tunda;
   int _versi = 0;
 
+  // perbandingan dengan laporan dirasakan BMKG
+  Geokoder? _geokoder;
+  List<(LaporanDirasakan, (double, double)?)>? _titikBanding; // koordinat daerah (di-cache antar-hitung)
+  List<BarisPerbandingan>? _banding;
+  bool _membandingkan = false;
+  int _progres = 0;
+
   @override
   void initState() {
     super.initState();
@@ -97,6 +125,14 @@ class _SimulasiPageState extends State<SimulasiPage> {
     _strike = widget.lokasi.sesarArahDeg ?? 0;
     if (widget.lokasi.jarakSesarKm != null && widget.lokasi.mekanisme != Mekanisme.takDiketahui) {
       _mek = widget.lokasi.mekanisme;
+    }
+    final g = widget.gempa;
+    if (g != null) {
+      _src = LatLng(g.lat, g.lon);
+      _m = g.magnitudo.clamp(3.5, 8.5).toDouble();
+      _dalam = g.kedalamanKm.clamp(5, 100).toDouble();
+      _strike = (widget.awalStrike ?? widget.lokasi.sesarArahDeg ?? 0).clamp(0, 180).toDouble();
+      _mek = widget.awalMek ?? Mekanisme.takDiketahui;
     }
     _jadwalkan();
   }
@@ -152,6 +188,7 @@ class _SimulasiPageState extends State<SimulasiPage> {
 
   /// Hitung ulang peta guncangan setelah jeda singkat, agar geseran slider tidak memicu hitungan di tiap piksel.
   void _jadwalkan() {
+    _banding = null; // hasil perbandingan lama tidak lagi sesuai pengaturan
     _tunda?.cancel();
     _tunda = Timer(const Duration(milliseconds: 180), _perbarui);
   }
@@ -381,6 +418,7 @@ class _SimulasiPageState extends State<SimulasiPage> {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
+        if (widget.gempa != null) _spanduk(context),
         // ringkasan hasil di paling atas agar langsung terlihat saat slider digeser
         Text('Titikmu berada ${sim.jarakKm.toStringAsFixed(1)} km di arah ${namaArah(sim.arahDeg)} dari pusat sumber '
             '(${sim.rjbKm.toStringAsFixed(1)} km dari retakan sepanjang ±${sim.panjangKm.round()} km).',
@@ -420,9 +458,9 @@ class _SimulasiPageState extends State<SimulasiPage> {
         Text('Magnitudo ${_m.toStringAsFixed(1)}', style: tema.textTheme.labelLarge),
         Slider(
           key: const Key('slider-magnitudo'),
-          min: 4.5,
+          min: 3.5,
           max: 8.5,
-          divisions: 40,
+          divisions: 50,
           value: _m,
           label: _m.toStringAsFixed(1),
           onChanged: (v) {
@@ -478,6 +516,7 @@ class _SimulasiPageState extends State<SimulasiPage> {
           ),
         const Divider(),
         if (sim.berlaku) ..._dampakTurunan(context, mmi!),
+        ..._bagianBanding(context, sim),
         const SizedBox(height: 8),
         Text('Peta guncangan (MMI)', style: tema.textTheme.labelLarge),
         const SizedBox(height: 4),
@@ -512,6 +551,168 @@ class _SimulasiPageState extends State<SimulasiPage> {
             style: kecil),
       ],
     );
+  }
+
+  /// Vs30 di sebuah titik dari grid geologi sekitar sumber; 400 m/s (tanah sedang) bila di luar grid atau tanpa data.
+  double _vs30Di(double lat, double lon) {
+    final g = _geo;
+    if (g == null) return 400;
+    final i = ((lat - g.lat0) / g.dLat).floor(), j = ((lon - g.lon0) / g.dLon).floor();
+    if (i < 0 || j < 0 || i >= g.ny || j >= g.nx) return 400;
+    final v = g.vs30[i * g.nx + j];
+    return v.isNaN ? 400 : v.toDouble();
+  }
+
+  Future<void> _bandingkan() async {
+    final g = widget.gempa;
+    if (g == null || _dalam > kedalamanMaksKm || _membandingkan) return;
+    final m = _m, dalam = _dalam, strike = _strike, mek = _mek;
+    setState(() {
+      _membandingkan = true;
+      _banding = null;
+      _progres = 0;
+    });
+    if (_titikBanding == null) {
+      final cari = widget.geokode ?? (String n, double la, double lo) => (_geokoder ??= Geokoder(_klien)).cari(n, la, lo);
+      final titik = <(LaporanDirasakan, (double, double)?)>[];
+      for (final l in g.dirasakan) {
+        titik.add((l, await cari(l.tempat, g.lat, g.lon)));
+        if (!mounted) return;
+        setState(() => _progres = titik.length);
+      }
+      _titikBanding = titik;
+    }
+    // episentrum BMKG yang dipakai (bukan titik sumber yang mungkin sudah digeser pengguna)
+    final baris = bandingkan(
+      titik: _titikBanding!,
+      srcLat: g.lat,
+      srcLon: g.lon,
+      magnitudo: m,
+      kedalamanKm: dalam,
+      arahSesarDeg: strike,
+      mekanisme: mek,
+      vs30Di: _vs30Di,
+    );
+    if (!mounted) return;
+    setState(() {
+      _banding = baris;
+      _membandingkan = false;
+    });
+  }
+
+  Widget _spanduk(BuildContext context) {
+    final g = widget.gempa!;
+    final tema = Theme.of(context);
+    return Card(
+      color: tema.colorScheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Gempa nyata BMKG · M${g.magnitudo.toStringAsFixed(1)} · ${g.kedalamanKm.round()} km',
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text('${g.wilayah} · ${g.waktuWib}'),
+            const SizedBox(height: 4),
+            Text(
+                widget.awalMek != null
+                    ? 'Mekanisme dan arah sesar diperkirakan dari sesar aktif terdekat (peta 1:1.000.000), bukan dari data BMKG. Ubah bila perlu.'
+                    : 'BMKG tidak memberi mekanisme dan arah sesar. Atur manual; bawaan: mekanisme tak diketahui, arah utara–selatan.',
+                style: tema.textTheme.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _bagianBanding(BuildContext context, HasilSimulasi sim) {
+    final g = widget.gempa;
+    if (g == null || g.dirasakan.isEmpty) return const [];
+    final tema = Theme.of(context);
+    final kecil = tema.textTheme.bodySmall;
+
+    Widget isi;
+    if (!sim.berlaku) {
+      isi = Text('Tidak tersedia: kedalaman melebihi ${kedalamanMaksKm.round()} km (di luar domain model).', style: kecil);
+    } else if (_membandingkan) {
+      isi = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        LinearProgressIndicator(value: _progres / g.dirasakan.length),
+        const SizedBox(height: 4),
+        Text('Mencari lokasi daerah $_progres/${g.dirasakan.length} (dijeda per daerah sesuai aturan layanan peta)…', style: kecil),
+      ]);
+    } else if (_banding == null) {
+      isi = Align(
+        alignment: Alignment.centerLeft,
+        child: FilledButton.tonalIcon(
+          key: const Key('tombol-banding'),
+          onPressed: _bandingkan,
+          icon: const Icon(Icons.compare_arrows),
+          label: Text(_titikBanding == null ? 'Bandingkan' : 'Hitung ulang dengan pengaturan sekarang'),
+        ),
+      );
+    } else {
+      final r = ringkas(_banding!);
+      Color warna(double d) => d.abs() <= 1 ? const Color(0xFF2E9E6B) : (d.abs() <= 2 ? const Color(0xFFE8702A) : const Color(0xFFD23B3B));
+      isi = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text('Daerah', style: tema.textTheme.labelMedium)),
+          SizedBox(width: 56, child: Text('BMKG', style: tema.textTheme.labelMedium)),
+          SizedBox(width: 56, child: Text('Model', style: tema.textTheme.labelMedium)),
+          SizedBox(width: 52, child: Text('Selisih', style: tema.textTheme.labelMedium)),
+        ]),
+        const Divider(height: 8),
+        for (final b in _banding!)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(children: [
+              Expanded(child: Text(b.laporan.tempat)),
+              SizedBox(width: 56, child: Text(b.laporan.skala)),
+              SizedBox(width: 56, child: Text(b.mmiModel == null ? '–' : b.mmiModel!.toStringAsFixed(1))),
+              SizedBox(
+                width: 52,
+                child: b.selisih == null
+                    ? const Text('–')
+                    : Text('${b.selisih! >= 0 ? '+' : ''}${b.selisih!.toStringAsFixed(1)}',
+                        style: TextStyle(color: warna(b.selisih!), fontWeight: FontWeight.w600)),
+              ),
+            ]),
+          ),
+        const SizedBox(height: 6),
+        if (r.n > 0)
+          Text(
+              'Rata-rata selisih model−BMKG: ${r.rataSelisih! >= 0 ? '+' : ''}${r.rataSelisih!.toStringAsFixed(2)} '
+              '(model ${r.rataSelisih! >= 0 ? 'lebih tinggi' : 'lebih rendah'}) · rata-rata mutlak ${r.rataMutlak!.toStringAsFixed(2)} · '
+              '${r.dalamSatuSkala} dari ${r.n} daerah dalam ±1 skala'
+              '${r.tidakDitemukan > 0 ? ' · ${r.tidakDitemukan} daerah tidak ditemukan' : ''}.',
+              style: tema.textTheme.bodyMedium)
+        else
+          Text('Tidak ada daerah yang berhasil dicari koordinatnya (periksa internet).', style: tema.textTheme.bodyMedium),
+        const SizedBox(height: 4),
+        Text(
+            'Laporan BMKG bersifat subjektif per kabupaten/kota; titik model diambil di pusat daerah (perkiraan) dan memakai '
+            'episentrum BMKG dengan pengaturan di atas. Satu kejadian tidak membuktikan model akurat, terutama untuk guncangan kuat.',
+            style: kecil),
+        TextButton.icon(onPressed: () => setState(() => _banding = null), icon: const Icon(Icons.refresh), label: const Text('Hitung ulang')),
+      ]);
+    }
+
+    return [
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Bandingkan dengan laporan BMKG (${g.dirasakan.length} daerah)', style: tema.textTheme.labelLarge),
+              const SizedBox(height: 4),
+              Text('Skala MMI yang dirasakan warga menurut BMKG dibandingkan dengan perkiraan model di daerah yang sama.', style: kecil),
+              const SizedBox(height: 8),
+              isi,
+            ],
+          ),
+        ),
+      ),
+    ];
   }
 
   List<Widget> _dampakTurunan(BuildContext context, double mmi) {

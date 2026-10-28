@@ -5,8 +5,10 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
+import 'katalog_page.dart';
 import 'mesin/daring.dart';
 import 'mesin/hasil.dart';
+import 'mesin/katalog_bmkg.dart';
 import 'mesin/kerentanan.dart';
 import 'peta_page.dart';
 import 'simulasi_page.dart';
@@ -169,6 +171,36 @@ class _BerandaPageState extends State<BerandaPage> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => SimulasiPage(lokasi: h, analisis: _hitung)));
   }
 
+  void _bukaKatalog() {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => KatalogPage(lokasiSaya: _hasil, onSimulasi: _simulasikanGempa),
+    ));
+  }
+
+  /// Buka menu Simulasi dengan gempa nyata BMKG. Arah dan mekanisme sesar diperkirakan dari sesar aktif terdekat
+  /// hanya bila sesar itu dalam 50 km dari episentrum; kalau lebih jauh, tebakan itu tidak berarti.
+  Future<void> _simulasikanGempa(GempaBmkg g) async {
+    final h = _hasil;
+    if (h == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lokasimu belum selesai dianalisis. Tunggu sebentar lalu coba lagi.')));
+      return;
+    }
+    showDialog<void>(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+    SesarDekat? sesar;
+    try {
+      sesar = await (await _mesinDaring()).sesarTerdekat(g.lat, g.lon);
+    } catch (_) {
+      sesar = null; // tanpa sesar: arah dan mekanisme diatur manual
+    }
+    if (!mounted) return;
+    Navigator.of(context).pop(); // tutup dialog
+    final dekat = (sesar != null && sesar.jarakKm <= 50) ? sesar : null;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => SimulasiPage(lokasi: h, analisis: _hitung, gempa: g, awalStrike: dekat?.arahDeg, awalMek: dekat?.mekanisme),
+    ));
+  }
+
   Future<void> _analisis(double lat, double lon, String label) async {
     if (!mounted) return;
     setState(() {
@@ -213,6 +245,7 @@ class _BerandaPageState extends State<BerandaPage> {
       appBar: AppBar(
         title: const Text('TERRA TUR'),
         actions: [
+          IconButton(tooltip: 'Gempa terkini BMKG', icon: const Icon(Icons.public), onPressed: _bukaKatalog),
           IconButton(
             tooltip: 'Simulasi gempa',
             icon: const Icon(Icons.crisis_alert),
@@ -315,6 +348,16 @@ class _BerandaPageState extends State<BerandaPage> {
           subtitle: const Text('Taruh sumber gempa di peta dan lihat dampaknya ke titikmu'),
           trailing: const Icon(Icons.chevron_right),
           onTap: _bukaSimulasi,
+        ),
+      ),
+      const SizedBox(height: 12),
+      Card(
+        child: ListTile(
+          leading: const Icon(Icons.public, color: Color(0xFF2F5FD0)),
+          title: const Text('Gempa terkini BMKG', style: TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: const Text('Lihat gempa terbaru, simulasikan, dan bandingkan dengan laporan dirasakan'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _bukaKatalog,
         ),
       ),
       const SizedBox(height: 12),
